@@ -1,8 +1,13 @@
 import { useEffect, useState, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  FlatList, RefreshControl, Animated,
+  FlatList, RefreshControl, Animated, Linking,
 } from 'react-native';
+
+function openMaps(location) {
+  const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`;
+  Linking.openURL(url);
+}
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Swipeable } from 'react-native-gesture-handler';
@@ -211,7 +216,12 @@ export default function HomeScreen({ navigation }) {
           )}
         </View>
 
-        {item.location ? <Text style={styles.meta}>📍 {item.location}</Text> : null}
+        {item.location ? (
+          <TouchableOpacity onPress={() => openMaps(item.location)} activeOpacity={0.7} style={styles.locationRow}>
+            <Text style={styles.meta}>📍 <Text style={styles.locationLink}>{item.location}</Text></Text>
+            <Ionicons name="chevron-forward" size={12} color="#555" />
+          </TouchableOpacity>
+        ) : null}
         {item.starts_at && !isLive && (
           <Text style={styles.meta}>
             🕐 {new Date(item.starts_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -361,6 +371,8 @@ const styles = StyleSheet.create({
   properBadge: { backgroundColor: '#0a1a2a' },
   badgeText: { fontSize: 11, fontWeight: '600', color: '#aaa' },
   meta: { color: '#888', fontSize: 13, marginBottom: 3 },
+  locationRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 3 },
+  locationLink: { textDecorationLine: 'underline', color: '#aaa' },
   statusText: { fontSize: 13, fontWeight: '600', marginTop: 2 },
   rsvpSummary: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
   rsvpText: { color: '#888', fontSize: 12 },

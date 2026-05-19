@@ -1,5 +1,10 @@
 import { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, FlatList, RefreshControl } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, FlatList, RefreshControl, Linking } from 'react-native';
+
+function openMaps(location) {
+  const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`;
+  Linking.openURL(url);
+}
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
@@ -51,7 +56,12 @@ export default function FutureEventsScreen({ navigation }) {
         </View>
         <View style={styles.cardBody}>
           <Text style={styles.cardTitle}>{item.title}</Text>
-          {item.location ? <Text style={styles.meta}>📍 {item.location}</Text> : null}
+          {item.location ? (
+            <TouchableOpacity onPress={() => openMaps(item.location)} activeOpacity={0.7} style={styles.locationRow}>
+              <Text style={styles.meta}>📍 <Text style={styles.locationLink}>{item.location}</Text></Text>
+              <Ionicons name="chevron-forward" size={12} color="#555" />
+            </TouchableOpacity>
+          ) : null}
           <Text style={styles.meta}>🕐 {d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
           <View style={styles.footer}>
             <Text style={styles.author}>{isOwner ? 'You' : userName}</Text>
@@ -120,6 +130,8 @@ const styles = StyleSheet.create({
   cardBody: { flex: 1, padding: 12 },
   cardTitle: { color: '#fff', fontSize: 15, fontWeight: '700', marginBottom: 4 },
   meta: { color: '#888', fontSize: 12, marginBottom: 2 },
+  locationRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 2 },
+  locationLink: { textDecorationLine: 'underline', color: '#aaa' },
   footer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 },
   author: { color: '#444', fontSize: 11 },
   rsvpRow: { flexDirection: 'row', gap: 6, alignItems: 'center' },

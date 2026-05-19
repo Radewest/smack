@@ -1,11 +1,16 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  ScrollView, ActivityIndicator, Alert,
+  ScrollView, ActivityIndicator, Alert, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
+
+function openMaps(location) {
+  const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`;
+  Linking.openURL(url);
+}
 
 const STATUS_LABELS = {
   on_the_way: 'On the way 🚶',
@@ -167,10 +172,11 @@ export default function EventDetailScreen({ route, navigation }) {
         {/* Meta */}
         <View style={styles.metaBox}>
           {event.location ? (
-            <View style={styles.metaRow}>
-              <Ionicons name="location" size={16} color="#888" />
-              <Text style={styles.metaText}>{event.location}</Text>
-            </View>
+            <TouchableOpacity style={styles.metaRow} onPress={() => openMaps(event.location)} activeOpacity={0.7}>
+              <Ionicons name="location" size={16} color="#ff3b30" />
+              <Text style={[styles.metaText, styles.locationText]}>{event.location}</Text>
+              <Ionicons name="chevron-forward" size={14} color="#555" />
+            </TouchableOpacity>
           ) : null}
           {event.starts_at && !isLive ? (
             <View style={styles.metaRow}>
@@ -323,6 +329,7 @@ const styles = StyleSheet.create({
   },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   metaText: { color: '#ccc', fontSize: 14, flex: 1 },
+  locationText: { color: '#fff', textDecorationLine: 'underline' },
   description: { color: '#888', fontSize: 14, marginTop: 4, lineHeight: 20 },
   section: { gap: 10 },
   sectionLabel: { color: '#555', fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
