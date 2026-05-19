@@ -10,8 +10,6 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
-import * as Linking from 'expo-linking';
-import { makeRedirectUri } from 'expo-linking';
 import { supabase } from '../lib/supabase';
 
 export default function LoginScreen() {
@@ -29,17 +27,15 @@ export default function LoginScreen() {
     setLoading(true);
 
     if (isSignUp) {
-      const redirectTo = makeRedirectUri({ scheme: 'smack', path: 'auth/confirm' });
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { emailRedirectTo: redirectTo },
-      });
+      console.log('[Auth] Attempting sign up for', email);
+      const { data, error } = await supabase.auth.signUp({ email, password });
       setLoading(false);
       if (error) {
         Alert.alert('Error', error.message);
+      } else if (!data.user) {
+        Alert.alert('Already registered', 'That email is already in use. Try logging in instead.');
       } else {
-        Alert.alert('Check your email', 'A confirmation link has been sent. Tap it to open the app.');
+        Alert.alert('Check your email', 'A confirmation link has been sent.');
       }
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
