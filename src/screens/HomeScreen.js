@@ -24,7 +24,7 @@ const NEXT_STATUSES = {
   heading_home: ['ended'],
 };
 
-export default function HomeScreen() {
+export default function HomeScreen({ navigation }) {
   const [events, setEvents] = useState([]);
   const [userId, setUserId] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -62,7 +62,11 @@ export default function HomeScreen() {
     const nextStatuses = isOwner && isLive ? (NEXT_STATUSES[item.live_status] || []) : [];
 
     return (
-      <View style={[styles.card, isHomeSafe && styles.homeSafeCard]}>
+      <TouchableOpacity
+        style={[styles.card, isHomeSafe && styles.homeSafeCard]}
+        onPress={() => navigation.navigate('EventDetail', { eventId: item.id })}
+        activeOpacity={0.75}
+      >
         <View style={styles.cardTop}>
           <View style={styles.titleRow}>
             {isLive && item.live_status !== 'ended' && (
@@ -103,7 +107,7 @@ export default function HomeScreen() {
             ))}
           </View>
         )}
-      </View>
+      </TouchableOpacity>
     );
   }
 
