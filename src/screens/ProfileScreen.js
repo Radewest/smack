@@ -17,6 +17,7 @@ export default function ProfileScreen() {
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [homeSafeLoading, setHomeSafeLoading] = useState(false);
+  const [freeLoading, setFreeLoading] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [myGroups, setMyGroups] = useState([]);
 
@@ -140,12 +141,45 @@ export default function ProfileScreen() {
       postHomeSafe(myGroups[0].id);
       return;
     }
-    // Multiple groups — let user pick
     Alert.alert(
       '🏠 Home Safe',
       'Which group do you want to notify?',
       [
         ...myGroups.map(g => ({ text: `${g.emoji} ${g.name}`, onPress: () => postHomeSafe(g.id) })),
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  }
+
+  async function postFreeTonight(groupId) {
+    setFreeLoading(true);
+    const { error } = await supabase.from('events').insert({
+      group_id: groupId,
+      created_by: user.id,
+      title: '🙋 Free tonight — anyone about?',
+      type: 'live',
+      live_status: 'live',
+    });
+    setFreeLoading(false);
+    if (error) Alert.alert('Error', error.message);
+    else Alert.alert('🙋 Posted!', "Your group can see you're free.");
+  }
+
+  function handleFreeTonight() {
+    if (!user) return;
+    if (myGroups.length === 0) {
+      Alert.alert('No groups', 'Join or create a group first.');
+      return;
+    }
+    if (myGroups.length === 1) {
+      postFreeTonight(myGroups[0].id);
+      return;
+    }
+    Alert.alert(
+      '🙋 Free Tonight',
+      'Post to which group?',
+      [
+        ...myGroups.map(g => ({ text: `${g.emoji} ${g.name}`, onPress: () => postFreeTonight(g.id) })),
         { text: 'Cancel', style: 'cancel' },
       ]
     );
@@ -224,18 +258,29 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         )}
 
-        {/* Home Safe */}
+        {/* Quick Actions */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Quick Actions</Text>
           <TouchableOpacity
-            style={[styles.homeSafeBtn, homeSafeLoading && styles.disabled]}
+            style={[styles.quickBtn, styles.quickBtnFree, freeLoading && styles.disabled]}
+            onPress={handleFreeTonight}
+            disabled={freeLoading}
+          >
+            <Text style={styles.quickIcon}>🙋</Text>
+            <View>
+              <Text style={styles.quickTitle}>Free Tonight</Text>
+              <Text style={styles.quickSubtitle}>Let your group know you're about</Text>
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.quickBtn, styles.quickBtnHome, homeSafeLoading && styles.disabled]}
             onPress={handleHomeSafe}
             disabled={homeSafeLoading}
           >
-            <Text style={styles.homeSafeIcon}>🏠</Text>
+            <Text style={styles.quickIcon}>🏠</Text>
             <View>
-              <Text style={styles.homeSafeTitle}>Home Safe</Text>
-              <Text style={styles.homeSafeSubtitle}>Let your friends know you're home</Text>
+              <Text style={styles.quickTitle}>Home Safe</Text>
+              <Text style={styles.quickSubtitle}>Let your friends know you're home</Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -288,13 +333,15 @@ const styles = StyleSheet.create({
   disabled: { opacity: 0.5 },
   section: { marginBottom: 20 },
   sectionLabel: { color: '#555', fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 },
-  homeSafeBtn: {
-    backgroundColor: '#0f1f17', borderRadius: 14, borderWidth: 1,
-    borderColor: '#1a3a2a', padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14,
+  quickBtn: {
+    borderRadius: 14, borderWidth: 1, padding: 16,
+    flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 10,
   },
-  homeSafeIcon: { fontSize: 28 },
-  homeSafeTitle: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  homeSafeSubtitle: { color: '#555', fontSize: 13, marginTop: 2 },
+  quickBtnFree: { backgroundColor: '#0a1a2a', borderColor: '#1a3a4a' },
+  quickBtnHome: { backgroundColor: '#0f1f17', borderColor: '#1a3a2a' },
+  quickIcon: { fontSize: 28 },
+  quickTitle: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  quickSubtitle: { color: '#555', fontSize: 13, marginTop: 2 },
   signOutBtn: {
     borderWidth: 1, borderColor: '#2a2a2a', borderRadius: 12,
     paddingVertical: 14, alignItems: 'center',
