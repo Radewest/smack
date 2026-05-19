@@ -59,7 +59,7 @@ export default function EventDetailScreen({ route, navigation }) {
   async function fetchEvent() {
     const { data } = await supabase
       .from('events')
-      .select('*, profiles(display_name, username)')
+      .select('*, profiles!events_created_by_fkey(display_name, username)')
       .eq('id', eventId)
       .single();
     if (data) setEvent(data);
@@ -69,7 +69,7 @@ export default function EventDetailScreen({ route, navigation }) {
     const { data: { user } } = await supabase.auth.getUser();
     const { data } = await supabase
       .from('rsvps')
-      .select('*, profiles(display_name, username)')
+      .select('*, profiles!events_created_by_fkey(display_name, username)')
       .eq('event_id', eventId);
     if (data) {
       setRsvps(data);

@@ -42,9 +42,9 @@ export default function HomeScreen({ navigation }) {
   }, []);
 
   async function fetchEvents() {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('events')
-      .select('*, profiles(display_name, username)')
+      .select('*, profiles!events_created_by_fkey(display_name, username)')
       .order('created_at', { ascending: false });
     if (data) setEvents(data);
     setRefreshing(false);
@@ -64,7 +64,7 @@ export default function HomeScreen({ navigation }) {
     return (
       <TouchableOpacity
         style={[styles.card, isHomeSafe && styles.homeSafeCard]}
-        onPress={() => navigation.navigate('EventDetail', { eventId: item.id })}
+        onPress={() => { console.log('[Home] tapped event', item.id); navigation.navigate('EventDetail', { eventId: item.id }); }}
         activeOpacity={0.75}
       >
         <View style={styles.cardTop}>

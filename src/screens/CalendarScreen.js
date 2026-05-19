@@ -50,7 +50,7 @@ export default function CalendarScreen() {
       <Calendar
         current={todayStr}
         markedDates={combined}
-        onDayPress={day => setSelectedDate(day.dateString)}
+        onDayPress={day => { console.log('[Cal] tapped', day.dateString); setSelectedDate(day.dateString); }}
         theme={{
           backgroundColor: '#0d0d0d',
           calendarBackground: '#0d0d0d',
