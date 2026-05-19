@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, FlatList, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 
@@ -9,12 +10,14 @@ export default function PastEventsScreen({ navigation }) {
   const [userId, setUserId] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUserId(user?.id);
-      fetchEvents(user?.id);
-    });
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        setUserId(user?.id);
+        fetchEvents(user?.id);
+      });
+    }, [])
+  );
 
   async function fetchEvents(uid) {
     if (!uid) return;
