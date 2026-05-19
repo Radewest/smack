@@ -1,26 +1,115 @@
 import { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import {
+  View, Text, TouchableOpacity, StyleSheet, TextInput,
+  Alert, ScrollView, Image, ActivityIndicator,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '../lib/supabase';
 
 const DEFAULT_GROUP_ID = '00000000-0000-0000-0000-000000000001';
 
 export default function ProfileScreen() {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [profile, setProfile] = useState(null);
+  const [displayName, setDisplayName] = useState('');
+  const [username, setUsername] = useState('');
+  const [bio, setBio] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [homeSafeLoading, setHomeSafeLoading] = useState(false);
+  const [dirty, setDirty] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => setUser(user));
+    loadProfile();
   }, []);
+
+  async function loadProfile() {
+    const { data: { user } } = await supabase.auth.getUser();
+    setUser(user);
+    const { data } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+    if (data) {
+      setProfile(data);
+      setDisplayName(data.display_name || '');
+      setUsername(data.username || '');
+      setBio(data.bio || '');
+      setAvatarUrl(data.avatar_url || null);
+    }
+  }
+
+  async function pickAvatar() {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Please allow access to your photos.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+    if (result.canceled) return;
+
+    setUploadingAvatar(true);
+    const uri = result.assets[0].uri;
+    const ext = uri.split('.').pop().toLowerCase();
+    const path = `${user.id}/avatar.${ext}`;
+
+    const response = await fetch(uri);
+    const blob = await response.blob();
+    const arrayBuffer = await new Response(blob).arrayBuffer();
+
+    const { error } = await supabase.storage
+      .from('avatars')
+      .upload(path, arrayBuffer, { contentType: `image/${ext}`, upsert: true });
+
+    if (error) {
+      Alert.alert('Upload failed', error.message);
+      setUploadingAvatar(false);
+      return;
+    }
+
+    const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path);
+    const urlWithBust = `${publicUrl}?t=${Date.now()}`;
+    setAvatarUrl(urlWithBust);
+    await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', user.id);
+    setUploadingAvatar(false);
+    setDirty(false);
+  }
+
+  async function saveProfile() {
+    if (!displayName.trim()) {
+      Alert.alert('Name required', 'Please enter a display name.');
+      return;
+    }
+    setSaving(true);
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        display_name: displayName.trim(),
+        username: username.trim() || null,
+        bio: bio.trim() || null,
+      })
+      .eq('id', user.id);
+    setSaving(false);
+    if (error) {
+      Alert.alert('Error', error.message);
+    } else {
+      setDirty(false);
+      Alert.alert('Saved!', 'Your profile has been updated.');
+    }
+  }
 
   async function handleHomeSafe() {
     if (!user) return;
-    setLoading(true);
+    setHomeSafeLoading(true);
     await supabase.from('profiles').upsert({ id: user.id }, { onConflict: 'id', ignoreDuplicates: true });
-    await supabase.from('group_members').upsert(
-      { group_id: DEFAULT_GROUP_ID, user_id: user.id, role: 'member' },
-      { onConflict: 'group_id,user_id', ignoreDuplicates: true }
-    );
     const { error } = await supabase.from('events').insert({
       group_id: DEFAULT_GROUP_ID,
       created_by: user.id,
@@ -28,83 +117,158 @@ export default function ProfileScreen() {
       type: 'live',
       live_status: 'ended',
     });
-    setLoading(false);
-    if (error) {
-      Alert.alert('Error', error.message);
-    } else {
-      Alert.alert('🏠 Home Safe!', 'Your friends have been notified.');
-    }
+    setHomeSafeLoading(false);
+    if (error) Alert.alert('Error', error.message);
+    else Alert.alert('🏠 Home Safe!', 'Your friends have been notified.');
   }
 
   async function handleSignOut() {
     await supabase.auth.signOut();
   }
 
+  const initials = (displayName || username || user?.email || '?')
+    .split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.heading}>Profile</Text>
-      <Text style={styles.email}>{user?.email}</Text>
+      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+        <Text style={styles.heading}>Profile</Text>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>Quick Actions</Text>
-
-        <TouchableOpacity
-          style={[styles.homeSafeBtn, loading && styles.disabled]}
-          onPress={handleHomeSafe}
-          disabled={loading}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.homeSafeIcon}>🏠</Text>
-          <View>
-            <Text style={styles.homeSafeTitle}>Home Safe</Text>
-            <Text style={styles.homeSafeSubtitle}>Let your friends know you're home</Text>
+        {/* Avatar */}
+        <TouchableOpacity style={styles.avatarWrap} onPress={pickAvatar} disabled={uploadingAvatar}>
+          {uploadingAvatar ? (
+            <ActivityIndicator color="#fff" style={styles.avatar} />
+          ) : avatarUrl ? (
+            <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+          ) : (
+            <View style={[styles.avatar, styles.avatarPlaceholder]}>
+              <Text style={styles.initials}>{initials}</Text>
+            </View>
+          )}
+          <View style={styles.avatarEdit}>
+            <Text style={styles.avatarEditText}>✏️</Text>
           </View>
         </TouchableOpacity>
-      </View>
 
-      <View style={styles.footer}>
+        <Text style={styles.emailLabel}>{user?.email}</Text>
+
+        {/* Fields */}
+        <View style={styles.form}>
+          <Text style={styles.label}>Display Name</Text>
+          <TextInput
+            style={styles.input}
+            value={displayName}
+            onChangeText={v => { setDisplayName(v); setDirty(true); }}
+            placeholder="Your name"
+            placeholderTextColor="#555"
+          />
+
+          <Text style={styles.label}>Username</Text>
+          <TextInput
+            style={styles.input}
+            value={username}
+            onChangeText={v => { setUsername(v); setDirty(true); }}
+            placeholder="@username"
+            placeholderTextColor="#555"
+            autoCapitalize="none"
+          />
+
+          <Text style={styles.label}>Bio</Text>
+          <TextInput
+            style={[styles.input, styles.bioInput]}
+            value={bio}
+            onChangeText={v => { setBio(v); setDirty(true); }}
+            placeholder="A short bio..."
+            placeholderTextColor="#555"
+            multiline
+            numberOfLines={3}
+          />
+        </View>
+
+        {dirty && (
+          <TouchableOpacity
+            style={[styles.saveBtn, saving && styles.disabled]}
+            onPress={saveProfile}
+            disabled={saving}
+          >
+            {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>Save Changes</Text>}
+          </TouchableOpacity>
+        )}
+
+        {/* Home Safe */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Quick Actions</Text>
+          <TouchableOpacity
+            style={[styles.homeSafeBtn, homeSafeLoading && styles.disabled]}
+            onPress={handleHomeSafe}
+            disabled={homeSafeLoading}
+          >
+            <Text style={styles.homeSafeIcon}>🏠</Text>
+            <View>
+              <Text style={styles.homeSafeTitle}>Home Safe</Text>
+              <Text style={styles.homeSafeSubtitle}>Let your friends know you're home</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+
         <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut}>
           <Text style={styles.signOutText}>Sign Out</Text>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0d0d0d', paddingHorizontal: 20 },
+  container: { flex: 1, backgroundColor: '#0d0d0d' },
+  scroll: { padding: 20, paddingBottom: 60 },
   heading: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: '#fff',
-    letterSpacing: -1,
-    paddingTop: 8,
-    marginBottom: 4,
+    fontSize: 28, fontWeight: '900', color: '#fff',
+    letterSpacing: -1, marginBottom: 24,
   },
-  email: { color: '#555', fontSize: 14, marginBottom: 32 },
-  section: { marginBottom: 24 },
-  sectionLabel: { color: '#555', fontSize: 12, fontWeight: '600', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 },
+  avatarWrap: { alignSelf: 'center', marginBottom: 10 },
+  avatar: {
+    width: 90, height: 90, borderRadius: 45,
+    backgroundColor: '#1a1a1a',
+  },
+  avatarPlaceholder: {
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: '#2a2a2a',
+  },
+  initials: { color: '#fff', fontSize: 30, fontWeight: '700' },
+  avatarEdit: {
+    position: 'absolute', bottom: 0, right: 0,
+    backgroundColor: '#ff3b30', borderRadius: 12,
+    width: 24, height: 24, alignItems: 'center', justifyContent: 'center',
+  },
+  avatarEditText: { fontSize: 12 },
+  emailLabel: { color: '#555', fontSize: 13, textAlign: 'center', marginBottom: 28 },
+  form: { gap: 6, marginBottom: 20 },
+  label: { color: '#555', fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 10 },
+  input: {
+    backgroundColor: '#1a1a1a', borderWidth: 1, borderColor: '#2a2a2a',
+    borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13,
+    fontSize: 15, color: '#fff',
+  },
+  bioInput: { height: 90, textAlignVertical: 'top', paddingTop: 12 },
+  saveBtn: {
+    backgroundColor: '#ff3b30', borderRadius: 12,
+    paddingVertical: 14, alignItems: 'center', marginBottom: 28,
+  },
+  saveBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+  disabled: { opacity: 0.5 },
+  section: { marginBottom: 20 },
+  sectionLabel: { color: '#555', fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 },
   homeSafeBtn: {
-    backgroundColor: '#0f1f17',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#1a3a2a',
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
+    backgroundColor: '#0f1f17', borderRadius: 14, borderWidth: 1,
+    borderColor: '#1a3a2a', padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14,
   },
   homeSafeIcon: { fontSize: 28 },
   homeSafeTitle: { color: '#fff', fontSize: 16, fontWeight: '700' },
   homeSafeSubtitle: { color: '#555', fontSize: 13, marginTop: 2 },
-  disabled: { opacity: 0.5 },
-  footer: { position: 'absolute', bottom: 40, left: 20, right: 20 },
   signOutBtn: {
-    borderWidth: 1,
-    borderColor: '#2a2a2a',
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
+    borderWidth: 1, borderColor: '#2a2a2a', borderRadius: 12,
+    paddingVertical: 14, alignItems: 'center',
   },
   signOutText: { color: '#888', fontSize: 15 },
 });
