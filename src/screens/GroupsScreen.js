@@ -1,51 +1,20 @@
-import { useEffect, useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, FlatList, Alert } from 'react-native';
+import { useEffect, useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, FlatList, Alert, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 
 export default function GroupsScreen({ navigation }) {
   const [groups, setGroups] = useState([]);
-  const [userId, setUserId] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => setUserId(user?.id));
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => { fetchGroups(); }, [])
-  );
+  useEffect(() => { fetchGroups(); }, []);
 
   async function fetchGroups() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { data: memberships } = await supabase
-      .from('group_members')
-      .select('group_id, role, groups(id, name, emoji, invite_code, created_by)')
-      .eq('user_id', user.id);
-
-    if (!memberships) return;
-
-    const groupIds = memberships.map(m => m.group_id);
-    const { data: allMembers } = await supabase
-      .from('group_members')
-      .select('group_id')
-      .in('group_id', groupIds);
-
-    const counts = {};
-    if (allMembers) {
-      allMembers.forEach(m => { counts[m.group_id] = (counts[m.group_id] || 0) + 1; });
-    }
-
-    setGroups(
-      memberships.map(m => ({
-        ...m.groups,
-        role: m.role,
-        memberCount: counts[m.group_id] || 1,
-      }))
-    );
+    // Single RPC replaces two queries
+    const { data } = await supabase.rpc('get_my_groups');
+    if (data) setGroups(data);
+    setRefreshing(false);
   }
 
   function handleFab() {
@@ -73,7 +42,7 @@ export default function GroupsScreen({ navigation }) {
         <View style={styles.cardBody}>
           <Text style={styles.groupName}>{item.name}</Text>
           <Text style={styles.groupMeta}>
-            {item.memberCount} member{item.memberCount !== 1 ? 's' : ''}
+            {item.member_count} member{item.member_count !== 1 ? 's' : ''}
             {item.role === 'admin' ? '  ·  Admin' : ''}
           </Text>
         </View>
@@ -92,6 +61,9 @@ export default function GroupsScreen({ navigation }) {
         data={groups}
         keyExtractor={item => item.id}
         contentContainerStyle={[styles.list, groups.length === 0 && styles.listEmpty]}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchGroups(); }} tintColor="#fff" />
+        }
         renderItem={renderGroup}
         ListHeaderComponent={
           groups.length > 0 ? <Text style={styles.sectionLabel}>Your Groups</Text> : null

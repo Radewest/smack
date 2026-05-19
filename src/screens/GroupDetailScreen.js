@@ -59,9 +59,9 @@ export default function GroupDetailScreen({ route, navigation }) {
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUserId(user?.id);
-      fetchDismissals(user?.id);
+      // Run both fetches in parallel after we have the uid
+      Promise.all([fetchEvents(), fetchDismissals(user?.id)]);
     });
-    fetchEvents();
 
     const channel = supabase
       .channel(`group_${groupId}`)
@@ -74,17 +74,14 @@ export default function GroupDetailScreen({ route, navigation }) {
 
   async function fetchDismissals(uid) {
     if (!uid) return;
-    // Fetch all dismissed IDs (used to hide cards in the feed)
     const { data } = await supabase
       .from('event_dismissals')
-      .select('event_id, events!event_dismissals_event_id_fkey(group_id)')
+      .select('event_id')
       .eq('user_id', uid);
     if (data) {
       const ids = new Set(data.map(d => d.event_id));
       setDismissedIds(ids);
-      // Only count dismissed events belonging to THIS group for the card
-      const groupCount = data.filter(d => d.events?.group_id === groupId).length;
-      setPastCount(groupCount);
+      setPastCount(ids.size);
     }
   }
 
@@ -105,7 +102,8 @@ export default function GroupDetailScreen({ route, navigation }) {
       .from('events')
       .select('*, profiles!events_created_by_fkey(display_name, username), rsvps(user_id, status, attendance_status, profiles!rsvps_user_id_fkey(display_name, username))')
       .eq('group_id', groupId)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(60);
 
     if (data) {
       const now = new Date();
@@ -143,11 +141,15 @@ export default function GroupDetailScreen({ route, navigation }) {
 
   async function updateAttendanceStatus(eventId, uid, status) {
     if (!uid) return;
+    // Optimistic update — reflect change immediately, then sync
+    setEvents(prev => prev.map(e => {
+      if (e.id !== eventId) return e;
+      return { ...e, rsvps: e.rsvps.map(r => r.user_id === uid ? { ...r, attendance_status: status } : r) };
+    }));
     await supabase.from('rsvps').upsert(
       { event_id: eventId, user_id: uid, status: 'going', attendance_status: status, updated_at: new Date().toISOString() },
       { onConflict: 'event_id,user_id' }
     );
-    fetchEvents();
   }
 
   function renderRightActions() {
