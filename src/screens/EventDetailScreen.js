@@ -39,20 +39,22 @@ export default function EventDetailScreen({ route, navigation }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => setUserId(user?.id));
-    fetchAll();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUserId(user?.id);
+      fetchAll(user?.id);
+    });
 
     const channel = supabase
       .channel(`event_${eventId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'events', filter: `id=eq.${eventId}` }, fetchEvent)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'rsvps', filter: `event_id=eq.${eventId}` }, fetchRsvps)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'rsvps', filter: `event_id=eq.${eventId}` }, () => fetchRsvps(userId))
       .subscribe();
 
     return () => supabase.removeChannel(channel);
   }, []);
 
-  async function fetchAll() {
-    await Promise.all([fetchEvent(), fetchRsvps()]);
+  async function fetchAll(uid) {
+    await Promise.all([fetchEvent(), fetchRsvps(uid)]);
     setLoading(false);
   }
 
@@ -65,15 +67,14 @@ export default function EventDetailScreen({ route, navigation }) {
     if (data) setEvent(data);
   }
 
-  async function fetchRsvps() {
-    const { data: { user } } = await supabase.auth.getUser();
+  async function fetchRsvps(uid) {
     const { data } = await supabase
       .from('rsvps')
-      .select('*, profiles!events_created_by_fkey(display_name, username)')
+      .select('*, profiles!rsvps_user_id_fkey(display_name, username)')
       .eq('event_id', eventId);
     if (data) {
       setRsvps(data);
-      const mine = data.find(r => r.user_id === user?.id);
+      const mine = data.find(r => r.user_id === uid);
       setMyRsvp(mine?.status ?? null);
     }
   }
@@ -81,16 +82,16 @@ export default function EventDetailScreen({ route, navigation }) {
   async function handleRsvp(status) {
     if (!userId) return;
     if (myRsvp === status) {
-      await supabase.from('rsvps').delete().eq('event_id', eventId).eq('user_id', userId);
       setMyRsvp(null);
+      await supabase.from('rsvps').delete().eq('event_id', eventId).eq('user_id', userId);
     } else {
+      setMyRsvp(status);
       await supabase.from('rsvps').upsert(
         { event_id: eventId, user_id: userId, status, updated_at: new Date().toISOString() },
         { onConflict: 'event_id,user_id' }
       );
-      setMyRsvp(status);
     }
-    fetchRsvps();
+    fetchRsvps(userId);
   }
 
   async function updateLiveStatus(status) {
