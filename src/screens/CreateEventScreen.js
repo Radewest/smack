@@ -7,9 +7,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { supabase } from '../lib/supabase';
 
-const DEFAULT_GROUP_ID = '00000000-0000-0000-0000-000000000001';
-
-export default function CreateEventScreen({ navigation }) {
+export default function CreateEventScreen({ route, navigation }) {
+  const groupId = route.params?.groupId;
   const [type, setType] = useState('proper');
   const [title, setTitle] = useState('');
   const [location, setLocation] = useState('');
@@ -27,17 +26,16 @@ export default function CreateEventScreen({ navigation }) {
     }
     setLoading(true);
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await supabase.from('profiles').upsert({ id: user.id }, { onConflict: 'id', ignoreDuplicates: true });
-      await supabase.from('group_members').upsert(
-        { group_id: DEFAULT_GROUP_ID, user_id: user.id, role: 'member' },
-        { onConflict: 'group_id,user_id', ignoreDuplicates: true }
-      );
+    if (!groupId) {
+      Alert.alert('No group', 'Open a group first, then tap + to create an event.');
+      setLoading(false);
+      return;
     }
 
+    const { data: { user } } = await supabase.auth.getUser();
+
     const payload = {
-      group_id: DEFAULT_GROUP_ID,
+      group_id: groupId,
       created_by: user.id,
       title: title.trim(),
       location: location.trim() || null,

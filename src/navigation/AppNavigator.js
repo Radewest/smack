@@ -1,8 +1,12 @@
-import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import HomeScreen from '../screens/HomeScreen';
+import GroupsScreen from '../screens/GroupsScreen';
+import GroupDetailScreen from '../screens/GroupDetailScreen';
+import GroupMembersScreen from '../screens/GroupMembersScreen';
+import CreateGroupScreen from '../screens/CreateGroupScreen';
+import JoinGroupScreen from '../screens/JoinGroupScreen';
 import CalendarScreen from '../screens/CalendarScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import CreateEventScreen from '../screens/CreateEventScreen';
@@ -12,14 +16,6 @@ import PastEventsScreen from '../screens/PastEventsScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
-
-function AddButton({ onPress }) {
-  return (
-    <TouchableOpacity style={styles.fab} onPress={onPress} activeOpacity={0.85}>
-      <Text style={styles.fabIcon}>+</Text>
-    </TouchableOpacity>
-  );
-}
 
 function Tabs() {
   return (
@@ -35,23 +31,13 @@ function Tabs() {
     >
       <Tab.Screen
         name="Home"
-        component={HomeScreen}
+        component={GroupsScreen}
         options={{ tabBarIcon: ({ color }) => <Ionicons name="home" size={22} color={color} /> }}
       />
       <Tab.Screen
         name="Calendar"
         component={CalendarScreen}
         options={{ tabBarIcon: ({ color }) => <Ionicons name="calendar" size={22} color={color} /> }}
-      />
-      <Tab.Screen
-        name="Add"
-        component={HomeScreen}
-        options={({ navigation }) => ({
-          tabBarLabel: '',
-          tabBarButton: () => (
-            <AddButton onPress={() => navigation.navigate('CreateEvent')} />
-          ),
-        })}
       />
       <Tab.Screen
         name="Profile"
@@ -66,11 +52,11 @@ export default function AppNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Tabs" component={Tabs} />
-      <Stack.Screen
-        name="CreateEvent"
-        component={CreateEventScreen}
-        options={{ presentation: 'modal' }}
-      />
+      <Stack.Screen name="GroupDetail" component={GroupDetailScreen} />
+      <Stack.Screen name="GroupMembers" component={GroupMembersScreen} />
+      <Stack.Screen name="CreateGroup" component={CreateGroupScreen} options={{ presentation: 'modal' }} />
+      <Stack.Screen name="JoinGroup" component={JoinGroupScreen} options={{ presentation: 'modal' }} />
+      <Stack.Screen name="CreateEvent" component={CreateEventScreen} options={{ presentation: 'modal' }} />
       <Stack.Screen name="EventDetail" component={EventDetailScreen} />
       <Stack.Screen name="FutureEvents" component={FutureEventsScreen} />
       <Stack.Screen name="PastEvents" component={PastEventsScreen} />
@@ -86,25 +72,5 @@ const styles = StyleSheet.create({
     height: 80,
     paddingBottom: 12,
     paddingTop: 6,
-  },
-  fab: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: '#ff3b30',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 14,
-    shadowColor: '#ff3b30',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  fabIcon: {
-    color: '#fff',
-    fontSize: 30,
-    fontWeight: '300',
-    lineHeight: 34,
   },
 });

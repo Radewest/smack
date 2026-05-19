@@ -9,7 +9,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 
-export default function FutureEventsScreen({ navigation }) {
+export default function FutureEventsScreen({ route, navigation }) {
+  const groupId = route.params?.groupId;
   const [events, setEvents] = useState([]);
   const [userId, setUserId] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -22,12 +23,14 @@ export default function FutureEventsScreen({ navigation }) {
   async function fetchEvents() {
     const now = new Date();
     const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).toISOString();
-    const { data } = await supabase
+    let query = supabase
       .from('events')
       .select('*, profiles!events_created_by_fkey(display_name, username), rsvps(user_id, status)')
       .eq('type', 'proper')
       .gte('starts_at', todayEnd)
       .order('starts_at', { ascending: true });
+    if (groupId) query = query.eq('group_id', groupId);
+    const { data } = await query;
     if (data) setEvents(data);
     setRefreshing(false);
   }

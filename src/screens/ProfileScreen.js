@@ -7,8 +7,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '../lib/supabase';
 
-const DEFAULT_GROUP_ID = '00000000-0000-0000-0000-000000000001';
-
 export default function ProfileScreen() {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -20,10 +18,22 @@ export default function ProfileScreen() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [homeSafeLoading, setHomeSafeLoading] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [myGroups, setMyGroups] = useState([]);
 
   useEffect(() => {
     loadProfile();
+    loadGroups();
   }, []);
+
+  async function loadGroups() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase
+      .from('group_members')
+      .select('group_id, groups(id, name, emoji)')
+      .eq('user_id', user.id);
+    if (data) setMyGroups(data.map(m => m.groups).filter(Boolean));
+  }
 
   async function loadProfile() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -106,12 +116,10 @@ export default function ProfileScreen() {
     }
   }
 
-  async function handleHomeSafe() {
-    if (!user) return;
+  async function postHomeSafe(groupId) {
     setHomeSafeLoading(true);
-    await supabase.from('profiles').upsert({ id: user.id }, { onConflict: 'id', ignoreDuplicates: true });
     const { error } = await supabase.from('events').insert({
-      group_id: DEFAULT_GROUP_ID,
+      group_id: groupId,
       created_by: user.id,
       title: '🏠 Home Safe',
       type: 'live',
@@ -120,6 +128,27 @@ export default function ProfileScreen() {
     setHomeSafeLoading(false);
     if (error) Alert.alert('Error', error.message);
     else Alert.alert('🏠 Home Safe!', 'Your friends have been notified.');
+  }
+
+  function handleHomeSafe() {
+    if (!user) return;
+    if (myGroups.length === 0) {
+      Alert.alert('No groups', 'Join or create a group first.');
+      return;
+    }
+    if (myGroups.length === 1) {
+      postHomeSafe(myGroups[0].id);
+      return;
+    }
+    // Multiple groups — let user pick
+    Alert.alert(
+      '🏠 Home Safe',
+      'Which group do you want to notify?',
+      [
+        ...myGroups.map(g => ({ text: `${g.emoji} ${g.name}`, onPress: () => postHomeSafe(g.id) })),
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
   }
 
   async function handleSignOut() {
