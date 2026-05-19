@@ -4,6 +4,7 @@ import * as Linking from 'expo-linking';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { supabase } from './src/lib/supabase';
 import { usePushNotifications } from './src/hooks/usePushNotifications';
 import LoginScreen from './src/screens/LoginScreen';
@@ -33,6 +34,7 @@ export default function App() {
   if (session === undefined) return null;
 
   return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
     <SafeAreaProvider>
       <StatusBar style="light" />
       <NavigationContainer linking={linking}>
@@ -45,5 +47,6 @@ export default function App() {
         </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

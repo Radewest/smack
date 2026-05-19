@@ -8,6 +8,7 @@ import ProfileScreen from '../screens/ProfileScreen';
 import CreateEventScreen from '../screens/CreateEventScreen';
 import EventDetailScreen from '../screens/EventDetailScreen';
 import FutureEventsScreen from '../screens/FutureEventsScreen';
+import PastEventsScreen from '../screens/PastEventsScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -72,6 +73,7 @@ export default function AppNavigator() {
       />
       <Stack.Screen name="EventDetail" component={EventDetailScreen} />
       <Stack.Screen name="FutureEvents" component={FutureEventsScreen} />
+      <Stack.Screen name="PastEvents" component={PastEventsScreen} />
     </Stack.Navigator>
   );
 }

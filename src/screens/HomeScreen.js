@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  FlatList, RefreshControl,
+  FlatList, RefreshControl, Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { Swipeable } from 'react-native-gesture-handler';
 import { supabase } from '../lib/supabase';
 
 const STATUS_LABELS = {
@@ -36,12 +37,19 @@ function isToday(dateStr) {
 
 export default function HomeScreen({ navigation }) {
   const [events, setEvents] = useState([]);
+  const [endedEvents, setEndedEvents] = useState([]);
   const [futureCount, setFutureCount] = useState(0);
+  const [pastCount, setPastCount] = useState(0);
+  const [dismissedIds, setDismissedIds] = useState(new Set());
   const [userId, setUserId] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const swipeableRefs = useRef({});
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => setUserId(user?.id));
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUserId(user?.id);
+      fetchDismissals(user?.id);
+    });
     fetchEvents();
 
     const channel = supabase
@@ -53,6 +61,25 @@ export default function HomeScreen({ navigation }) {
     return () => supabase.removeChannel(channel);
   }, []);
 
+  async function fetchDismissals(uid) {
+    if (!uid) return;
+    const { data } = await supabase.from('event_dismissals').select('event_id').eq('user_id', uid);
+    if (data) {
+      const ids = new Set(data.map(d => d.event_id));
+      setDismissedIds(ids);
+      setPastCount(ids.size);
+    }
+  }
+
+  async function handleDismiss(eventId) {
+    if (!userId) return;
+    swipeableRefs.current[eventId]?.close();
+    await supabase.from('event_dismissals').upsert({ event_id: eventId, user_id: userId }, { onConflict: 'event_id,user_id', ignoreDuplicates: true });
+    setDismissedIds(prev => new Set([...prev, eventId]));
+    setPastCount(prev => prev + 1);
+    setEndedEvents(prev => prev.filter(e => e.id !== eventId));
+  }
+
   async function fetchEvents() {
     const { data } = await supabase
       .from('events')
@@ -60,27 +87,30 @@ export default function HomeScreen({ navigation }) {
       .order('created_at', { ascending: false });
 
     if (data) {
-      const todayEnd = new Date();
-      todayEnd.setHours(23, 59, 59, 999);
+      const now = new Date();
+      const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
 
-      // Today: live events (not ended) + proper events starting today
-      const todayEvents = data.filter(e =>
+      const todayActive = data.filter(e =>
         (e.type === 'live' && e.live_status !== 'ended') ||
-        (e.type === 'proper' && isToday(e.starts_at))
+        (e.type === 'proper' && isToday(e.starts_at) && new Date(e.starts_at) >= now)
       ).sort((a, b) => {
-        // Live events first, then by starts_at
         if (a.type === 'live' && b.type !== 'live') return -1;
         if (a.type !== 'live' && b.type === 'live') return 1;
         if (a.starts_at && b.starts_at) return new Date(a.starts_at) - new Date(b.starts_at);
         return new Date(b.created_at) - new Date(a.created_at);
       });
 
-      // Future: proper events after today
+      const todayEnded = data.filter(e =>
+        (e.type === 'live' && e.live_status === 'ended' && isToday(e.created_at)) ||
+        (e.type === 'proper' && isToday(e.starts_at) && new Date(e.starts_at) < now)
+      ).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
       const future = data.filter(e =>
         e.type === 'proper' && e.starts_at && new Date(e.starts_at) > todayEnd
       );
 
-      setEvents(todayEvents);
+      setEvents(todayActive);
+      setEndedEvents(todayEnded);
       setFutureCount(future.length);
     }
     setRefreshing(false);
@@ -90,21 +120,42 @@ export default function HomeScreen({ navigation }) {
     await supabase.from('events').update({ live_status: status }).eq('id', eventId);
   }
 
+  function renderRightActions() {
+    return (
+      <View style={styles.dismissAction}>
+        <Ionicons name="archive" size={22} color="#fff" />
+        <Text style={styles.dismissText}>Archive</Text>
+      </View>
+    );
+  }
+
   function renderEvent({ item }) {
     if (item._isFutureCard) {
       return (
-        <TouchableOpacity
-          style={styles.futureCard}
-          onPress={() => navigation.navigate('FutureEvents')}
-          activeOpacity={0.8}
-        >
-          <View style={styles.futureCardLeft}>
-            <Text style={styles.futureCardTitle}>Upcoming Smacks</Text>
-            <Text style={styles.futureCardSub}>{item.count} event{item.count !== 1 ? 's' : ''} planned</Text>
+        <TouchableOpacity style={styles.linkCard} onPress={() => navigation.navigate('FutureEvents')} activeOpacity={0.8}>
+          <View style={styles.linkCardLeft}>
+            <Text style={styles.linkCardTitle}>Upcoming Smacks</Text>
+            <Text style={styles.linkCardSub}>{item.count} event{item.count !== 1 ? 's' : ''} planned</Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color="#555" />
         </TouchableOpacity>
       );
+    }
+
+    if (item._isPastCard) {
+      return (
+        <TouchableOpacity style={styles.linkCard} onPress={() => navigation.navigate('PastEvents')} activeOpacity={0.8}>
+          <View style={styles.linkCardLeft}>
+            <Text style={styles.linkCardTitle}>Past Events</Text>
+            <Text style={styles.linkCardSub}>{item.count} archived</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#555" />
+        </TouchableOpacity>
+      );
+    }
+
+    if (item._isSectionHeader) {
+      return <Text style={styles.sectionDivider}>{item.label}</Text>;
     }
 
     const isOwner = item.created_by === userId;
@@ -118,9 +169,9 @@ export default function HomeScreen({ navigation }) {
     const myRsvp = rsvps.find(r => r.user_id === userId);
     const goingNames = going.map(r => r.profiles?.display_name || r.profiles?.username || 'Someone');
 
-    return (
+    const card = (
       <TouchableOpacity
-        style={[styles.card, isHomeSafe && styles.homeSafeCard]}
+        style={[styles.card, isHomeSafe && styles.homeSafeCard, item._ended && styles.cardEnded]}
         onPress={() => navigation.navigate('EventDetail', { eventId: item.id })}
         activeOpacity={0.75}
       >
@@ -181,12 +232,31 @@ export default function HomeScreen({ navigation }) {
         )}
       </TouchableOpacity>
     );
+
+    if (item._ended) {
+      return (
+        <Swipeable
+          ref={ref => { swipeableRefs.current[item.id] = ref; }}
+          renderRightActions={renderRightActions}
+          onSwipeableOpen={dir => { if (dir === 'right') handleDismiss(item.id); }}
+          rightThreshold={60}
+        >
+          {card}
+        </Swipeable>
+      );
+    }
+
+    return card;
   }
 
   const today = new Date().toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' });
+  const visibleEnded = endedEvents.filter(e => !dismissedIds.has(e.id)).map(e => ({ ...e, _ended: true }));
+
   const listData = [
     ...events,
+    ...(visibleEnded.length > 0 ? [{ _isSectionHeader: true, id: '_endedHeader', label: 'Ended' }, ...visibleEnded] : []),
     ...(futureCount > 0 ? [{ _isFutureCard: true, id: '_future', count: futureCount }] : []),
+    ...(pastCount > 0 ? [{ _isPastCard: true, id: '_past', count: pastCount }] : []),
   ];
 
   return (
@@ -251,15 +321,25 @@ const styles = StyleSheet.create({
   statusBtns: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 },
   statusBtn: { backgroundColor: '#2a2a2a', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
   statusBtnText: { color: '#ccc', fontSize: 12, fontWeight: '600' },
-  futureCard: {
+  cardEnded: { opacity: 0.5 },
+  sectionDivider: {
+    color: '#444', fontSize: 11, fontWeight: '700', textTransform: 'uppercase',
+    letterSpacing: 0.5, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 6,
+  },
+  dismissAction: {
+    backgroundColor: '#3a3a3c', justifyContent: 'center', alignItems: 'center',
+    width: 80, borderRadius: 14, marginLeft: 8, marginBottom: 10, gap: 4,
+  },
+  dismissText: { color: '#fff', fontSize: 11, fontWeight: '600' },
+  linkCard: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: '#1a1a1a', borderRadius: 14, padding: 16,
     marginHorizontal: 16, marginBottom: 10, borderWidth: 1, borderColor: '#2a2a2a',
     marginTop: 6,
   },
-  futureCardLeft: { gap: 2 },
-  futureCardTitle: { color: '#fff', fontSize: 15, fontWeight: '700' },
-  futureCardSub: { color: '#555', fontSize: 13 },
+  linkCardLeft: { gap: 2 },
+  linkCardTitle: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  linkCardSub: { color: '#555', fontSize: 13 },
   empty: { alignItems: 'center', marginTop: 60 },
   emptyText: { color: '#fff', fontSize: 16, fontWeight: '600', marginBottom: 6 },
   emptySubText: { color: '#555', fontSize: 14 },
