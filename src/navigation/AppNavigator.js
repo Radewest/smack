@@ -7,6 +7,7 @@ import CalendarScreen from '../screens/CalendarScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import CreateEventScreen from '../screens/CreateEventScreen';
 import EventDetailScreen from '../screens/EventDetailScreen';
+import FutureEventsScreen from '../screens/FutureEventsScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -69,10 +70,8 @@ export default function AppNavigator() {
         component={CreateEventScreen}
         options={{ presentation: 'modal' }}
       />
-      <Stack.Screen
-        name="EventDetail"
-        component={EventDetailScreen}
-      />
+      <Stack.Screen name="EventDetail" component={EventDetailScreen} />
+      <Stack.Screen name="FutureEvents" component={FutureEventsScreen} />
     </Stack.Navigator>
   );
 }

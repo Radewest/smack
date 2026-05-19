@@ -4,6 +4,7 @@ import {
   FlatList, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 
 const STATUS_LABELS = {
@@ -24,25 +25,18 @@ const NEXT_STATUSES = {
   heading_home: ['ended'],
 };
 
-function sortEvents(events) {
+function isToday(dateStr) {
+  if (!dateStr) return false;
+  const d = new Date(dateStr);
   const now = new Date();
-  const activeLive = events
-    .filter(e => e.type === 'live' && e.live_status !== 'ended')
-    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-  const upcoming = events
-    .filter(e => e.type === 'proper' && e.starts_at && new Date(e.starts_at) >= now)
-    .sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at));
-  const past = events
-    .filter(e =>
-      (e.type === 'live' && e.live_status === 'ended') ||
-      (e.type === 'proper' && (!e.starts_at || new Date(e.starts_at) < now))
-    )
-    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-  return [...activeLive, ...upcoming, ...past];
+  return d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate();
 }
 
 export default function HomeScreen({ navigation }) {
   const [events, setEvents] = useState([]);
+  const [futureCount, setFutureCount] = useState(0);
   const [userId, setUserId] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -64,7 +58,31 @@ export default function HomeScreen({ navigation }) {
       .from('events')
       .select('*, profiles!events_created_by_fkey(display_name, username), rsvps(user_id, status, profiles!rsvps_user_id_fkey(display_name, username))')
       .order('created_at', { ascending: false });
-    if (data) setEvents(sortEvents(data));
+
+    if (data) {
+      const todayEnd = new Date();
+      todayEnd.setHours(23, 59, 59, 999);
+
+      // Today: live events (not ended) + proper events starting today
+      const todayEvents = data.filter(e =>
+        (e.type === 'live' && e.live_status !== 'ended') ||
+        (e.type === 'proper' && isToday(e.starts_at))
+      ).sort((a, b) => {
+        // Live events first, then by starts_at
+        if (a.type === 'live' && b.type !== 'live') return -1;
+        if (a.type !== 'live' && b.type === 'live') return 1;
+        if (a.starts_at && b.starts_at) return new Date(a.starts_at) - new Date(b.starts_at);
+        return new Date(b.created_at) - new Date(a.created_at);
+      });
+
+      // Future: proper events after today
+      const future = data.filter(e =>
+        e.type === 'proper' && e.starts_at && new Date(e.starts_at) > todayEnd
+      );
+
+      setEvents(todayEvents);
+      setFutureCount(future.length);
+    }
     setRefreshing(false);
   }
 
@@ -73,20 +91,32 @@ export default function HomeScreen({ navigation }) {
   }
 
   function renderEvent({ item }) {
+    if (item._isFutureCard) {
+      return (
+        <TouchableOpacity
+          style={styles.futureCard}
+          onPress={() => navigation.navigate('FutureEvents')}
+          activeOpacity={0.8}
+        >
+          <View style={styles.futureCardLeft}>
+            <Text style={styles.futureCardTitle}>Upcoming Smacks</Text>
+            <Text style={styles.futureCardSub}>{item.count} event{item.count !== 1 ? 's' : ''} planned</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#555" />
+        </TouchableOpacity>
+      );
+    }
+
     const isOwner = item.created_by === userId;
     const isLive = item.type === 'live';
     const isHomeSafe = item.title === '🏠 Home Safe';
     const userName = item.profiles?.display_name || item.profiles?.username || 'Someone';
     const nextStatuses = isOwner && isLive ? (NEXT_STATUSES[item.live_status] || []) : [];
-
     const rsvps = item.rsvps || [];
     const going = rsvps.filter(r => r.status === 'going');
     const maybe = rsvps.filter(r => r.status === 'maybe');
     const myRsvp = rsvps.find(r => r.user_id === userId);
-
-    const goingNames = going.map(r =>
-      r.profiles?.display_name || r.profiles?.username || 'Someone'
-    );
+    const goingNames = going.map(r => r.profiles?.display_name || r.profiles?.username || 'Someone');
 
     return (
       <TouchableOpacity
@@ -103,7 +133,7 @@ export default function HomeScreen({ navigation }) {
           </View>
           {!isHomeSafe && (
             <View style={[styles.badge, isLive ? styles.liveBadge : styles.properBadge]}>
-              <Text style={styles.badgeText}>{isLive ? '⚡ Live' : '📅 Event'}</Text>
+              <Text style={styles.badgeText}>{isLive ? '⚡ Live' : '📅 Today'}</Text>
             </View>
           )}
         </View>
@@ -111,10 +141,7 @@ export default function HomeScreen({ navigation }) {
         {item.location ? <Text style={styles.meta}>📍 {item.location}</Text> : null}
         {item.starts_at && !isLive && (
           <Text style={styles.meta}>
-            🕐 {new Date(item.starts_at).toLocaleString([], {
-              weekday: 'short', month: 'short', day: 'numeric',
-              hour: '2-digit', minute: '2-digit',
-            })}
+            🕐 {new Date(item.starts_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </Text>
         )}
         {isLive && item.live_status && (
@@ -123,17 +150,14 @@ export default function HomeScreen({ navigation }) {
           </Text>
         )}
 
-        {/* RSVP summary */}
         {!isHomeSafe && (going.length > 0 || maybe.length > 0 || myRsvp) && (
           <View style={styles.rsvpSummary}>
             {going.length > 0 && (
-              <Text style={styles.rsvpSummaryText}>
+              <Text style={styles.rsvpText}>
                 🙋 {goingNames.slice(0, 2).join(', ')}{going.length > 2 ? ` +${going.length - 2}` : ''}
               </Text>
             )}
-            {maybe.length > 0 && (
-              <Text style={styles.rsvpSummaryText}>🤔 {maybe.length} maybe</Text>
-            )}
+            {maybe.length > 0 && <Text style={styles.rsvpText}>🤔 {maybe.length} maybe</Text>}
             {myRsvp && (
               <View style={styles.myRsvpBadge}>
                 <Text style={styles.myRsvpText}>
@@ -149,11 +173,7 @@ export default function HomeScreen({ navigation }) {
         {nextStatuses.length > 0 && (
           <View style={styles.statusBtns}>
             {nextStatuses.map(s => (
-              <TouchableOpacity
-                key={s}
-                style={styles.statusBtn}
-                onPress={e => { e.stopPropagation?.(); updateStatus(item.id, s); }}
-              >
+              <TouchableOpacity key={s} style={styles.statusBtn} onPress={() => updateStatus(item.id, s)}>
                 <Text style={styles.statusBtnText}>{STATUS_LABELS[s]}</Text>
               </TouchableOpacity>
             ))}
@@ -163,23 +183,33 @@ export default function HomeScreen({ navigation }) {
     );
   }
 
+  const today = new Date().toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' });
+  const listData = [
+    ...events,
+    ...(futureCount > 0 ? [{ _isFutureCard: true, id: '_future', count: futureCount }] : []),
+  ];
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.logo}>Smack</Text>
+        <Text style={styles.date}>{today}</Text>
       </View>
       <FlatList
-        data={events}
+        data={listData}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.list}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchEvents(); }} tintColor="#fff" />
         }
         renderItem={renderEvent}
+        ListHeaderComponent={
+          <Text style={styles.sectionLabel}>Today</Text>
+        }
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={styles.emptyText}>No smacks yet.</Text>
-            <Text style={styles.emptySubText}>Tap + to create one.</Text>
+            <Text style={styles.emptyText}>Nothing on today.</Text>
+            <Text style={styles.emptySubText}>Tap + to create a smack.</Text>
           </View>
         }
       />
@@ -189,12 +219,18 @@ export default function HomeScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0d0d0d' },
-  header: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 },
+  header: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 4 },
   logo: { fontSize: 28, fontWeight: '900', color: '#fff', letterSpacing: -1 },
-  list: { paddingHorizontal: 16, paddingBottom: 100 },
+  date: { color: '#555', fontSize: 13, marginTop: 2, marginBottom: 8 },
+  sectionLabel: {
+    color: '#555', fontSize: 12, fontWeight: '600',
+    textTransform: 'uppercase', letterSpacing: 0.5,
+    paddingHorizontal: 16, paddingBottom: 10,
+  },
+  list: { paddingBottom: 100 },
   card: {
     backgroundColor: '#1a1a1a', borderRadius: 14, padding: 16,
-    marginBottom: 10, borderWidth: 1, borderColor: '#2a2a2a',
+    marginHorizontal: 16, marginBottom: 10, borderWidth: 1, borderColor: '#2a2a2a',
   },
   homeSafeCard: { borderColor: '#1a3a2a', backgroundColor: '#0f1f17' },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
@@ -208,14 +244,23 @@ const styles = StyleSheet.create({
   meta: { color: '#888', fontSize: 13, marginBottom: 3 },
   statusText: { fontSize: 13, fontWeight: '600', marginTop: 2 },
   rsvpSummary: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
-  rsvpSummaryText: { color: '#888', fontSize: 12 },
+  rsvpText: { color: '#888', fontSize: 12 },
   myRsvpBadge: { backgroundColor: '#2a1a00', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 },
   myRsvpText: { color: '#ff9f0a', fontSize: 12, fontWeight: '600' },
   author: { color: '#444', fontSize: 11, marginTop: 8 },
   statusBtns: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 },
   statusBtn: { backgroundColor: '#2a2a2a', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
   statusBtnText: { color: '#ccc', fontSize: 12, fontWeight: '600' },
-  empty: { alignItems: 'center', marginTop: 80 },
+  futureCard: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: '#1a1a1a', borderRadius: 14, padding: 16,
+    marginHorizontal: 16, marginBottom: 10, borderWidth: 1, borderColor: '#2a2a2a',
+    marginTop: 6,
+  },
+  futureCardLeft: { gap: 2 },
+  futureCardTitle: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  futureCardSub: { color: '#555', fontSize: 13 },
+  empty: { alignItems: 'center', marginTop: 60 },
   emptyText: { color: '#fff', fontSize: 16, fontWeight: '600', marginBottom: 6 },
   emptySubText: { color: '#555', fontSize: 14 },
 });
