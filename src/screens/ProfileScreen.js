@@ -16,6 +16,11 @@ export default function ProfileScreen() {
   async function handleHomeSafe() {
     if (!user) return;
     setLoading(true);
+    await supabase.from('profiles').upsert({ id: user.id }, { onConflict: 'id', ignoreDuplicates: true });
+    await supabase.from('group_members').upsert(
+      { group_id: DEFAULT_GROUP_ID, user_id: user.id, role: 'member' },
+      { onConflict: 'group_id,user_id', ignoreDuplicates: true }
+    );
     const { error } = await supabase.from('events').insert({
       group_id: DEFAULT_GROUP_ID,
       created_by: user.id,

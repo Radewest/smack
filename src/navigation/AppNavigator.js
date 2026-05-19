@@ -62,7 +62,7 @@ function Tabs() {
 export default function AppNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="Main" component={Tabs} />
+      <Stack.Screen name="Tabs" component={Tabs} />
       <Stack.Screen
         name="CreateEvent"
         component={CreateEventScreen}

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { supabase } from '../lib/supabase';
 
@@ -12,9 +13,11 @@ Notifications.setNotificationHandler({
   }),
 });
 
+const isExpoGo = Constants.appOwnership === 'expo';
+
 export function usePushNotifications() {
   useEffect(() => {
-    register();
+    if (!isExpoGo) register();
   }, []);
 
   async function register() {
