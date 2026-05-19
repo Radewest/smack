@@ -5,33 +5,28 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { supabase } from './src/lib/supabase';
+import { usePushNotifications } from './src/hooks/usePushNotifications';
 import LoginScreen from './src/screens/LoginScreen';
-import HomeScreen from './src/screens/HomeScreen';
+import AppNavigator from './src/navigation/AppNavigator';
 
 const Stack = createNativeStackNavigator();
 
 const linking = {
   prefixes: [Linking.createURL('/'), 'smack://'],
-  config: {
-    screens: {
-      Home: '',
-      Login: 'auth/confirm',
-    },
-  },
+  config: { screens: { Main: '', Login: 'auth/confirm' } },
 };
+
+function AuthedApp() {
+  usePushNotifications();
+  return <AppNavigator />;
+}
 
 export default function App() {
   const [session, setSession] = useState(undefined);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-
+    supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => setSession(session));
     return () => subscription.unsubscribe();
   }, []);
 
@@ -43,7 +38,7 @@ export default function App() {
       <NavigationContainer linking={linking}>
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           {session ? (
-            <Stack.Screen name="Home" component={HomeScreen} />
+            <Stack.Screen name="Main" component={AuthedApp} />
           ) : (
             <Stack.Screen name="Login" component={LoginScreen} />
           )}
