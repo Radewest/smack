@@ -137,7 +137,7 @@ export default function HomeScreen({ navigation }) {
             {myRsvp && (
               <View style={styles.myRsvpBadge}>
                 <Text style={styles.myRsvpText}>
-                  {myRsvp.status === 'going' ? 'You're keen' : myRsvp.status === 'maybe' ? 'You: maybe' : 'You: can't go'}
+                  {myRsvp.status === 'going' ? "You're keen" : myRsvp.status === 'maybe' ? 'You: maybe' : "You can't go"}
                 </Text>
               </View>
             )}
