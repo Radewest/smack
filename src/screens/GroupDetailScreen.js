@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Swipeable } from 'react-native-gesture-handler';
 import { supabase } from '../lib/supabase';
+import ReactionBar from '../components/ReactionBar';
 
 const STATUS_LABELS = {
   on_the_way: 'On the way 🚶',
@@ -67,6 +68,7 @@ export default function GroupDetailScreen({ route, navigation }) {
       .channel(`group_${groupId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'events', filter: `group_id=eq.${groupId}` }, fetchEvents)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'rsvps' }, fetchEvents)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reactions' }, fetchEvents)
       .subscribe();
 
     return () => supabase.removeChannel(channel);
@@ -100,7 +102,7 @@ export default function GroupDetailScreen({ route, navigation }) {
   async function fetchEvents() {
     const { data } = await supabase
       .from('events')
-      .select('*, profiles!events_created_by_fkey(display_name, username), rsvps(user_id, status, attendance_status, profiles!rsvps_user_id_fkey(display_name, username))')
+      .select('*, profiles!events_created_by_fkey(display_name, username), rsvps(user_id, status, attendance_status, profiles!rsvps_user_id_fkey(display_name, username)), reactions(id, user_id, emoji)')
       .eq('group_id', groupId)
       .order('created_at', { ascending: false })
       .limit(60);
@@ -137,6 +139,10 @@ export default function GroupDetailScreen({ route, navigation }) {
 
   async function updateStatus(eventId, status) {
     await supabase.from('events').update({ live_status: status }).eq('id', eventId);
+  }
+
+  function updateEventReactions(eventId, newReactions) {
+    setEvents(prev => prev.map(e => e.id === eventId ? { ...e, reactions: newReactions } : e));
   }
 
   async function updateAttendanceStatus(eventId, uid, status) {
@@ -271,6 +277,13 @@ export default function GroupDetailScreen({ route, navigation }) {
         )}
 
         <Text style={styles.author}>{isOwner ? 'You' : userName}</Text>
+
+        <ReactionBar
+          eventId={item.id}
+          reactions={item.reactions || []}
+          userId={userId}
+          onUpdate={newReactions => updateEventReactions(item.id, newReactions)}
+        />
 
         {nextStatuses.length > 0 && (
           <View style={styles.statusBtns}>

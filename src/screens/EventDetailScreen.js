@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
+import ReactionBar from '../components/ReactionBar';
 
 function openMaps(location) {
   const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`;
@@ -49,6 +50,7 @@ export default function EventDetailScreen({ route, navigation }) {
   const [rsvps, setRsvps] = useState([]);
   const [myRsvp, setMyRsvp] = useState(null);
   const [myAttendance, setMyAttendance] = useState(null);
+  const [reactions, setReactions] = useState([]);
   const [userId, setUserId] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -62,14 +64,23 @@ export default function EventDetailScreen({ route, navigation }) {
       .channel(`event_${eventId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'events', filter: `id=eq.${eventId}` }, fetchEvent)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'rsvps', filter: `event_id=eq.${eventId}` }, () => fetchRsvps(userId))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reactions', filter: `event_id=eq.${eventId}` }, fetchReactions)
       .subscribe();
 
     return () => supabase.removeChannel(channel);
   }, []);
 
   async function fetchAll(uid) {
-    await Promise.all([fetchEvent(), fetchRsvps(uid)]);
+    await Promise.all([fetchEvent(), fetchRsvps(uid), fetchReactions()]);
     setLoading(false);
+  }
+
+  async function fetchReactions() {
+    const { data } = await supabase
+      .from('reactions')
+      .select('id, user_id, emoji')
+      .eq('event_id', eventId);
+    if (data) setReactions(data);
   }
 
   async function fetchEvent() {
@@ -197,6 +208,14 @@ export default function EventDetailScreen({ route, navigation }) {
             <Text style={styles.description}>{event.description}</Text>
           ) : null}
         </View>
+
+        {/* Reactions */}
+        <ReactionBar
+          eventId={eventId}
+          reactions={reactions}
+          userId={userId}
+          onUpdate={setReactions}
+        />
 
         {/* Live status */}
         {isLive && event.live_status && (
