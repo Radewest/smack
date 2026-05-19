@@ -28,8 +28,9 @@ export default function JoinGroupScreen({ navigation }) {
       return;
     }
 
-    // Navigate straight into the group
-    navigation.replace('GroupDetail', {
+    // Navigate into the group — getParent() pushes onto the main stack
+    // so the modal dismisses and GroupsScreen refreshes behind it
+    navigation.getParent()?.navigate('GroupDetail', {
       groupId: data.group_id,
       groupName: data.name,
       groupEmoji: data.emoji,

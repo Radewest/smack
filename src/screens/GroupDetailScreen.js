@@ -74,11 +74,17 @@ export default function GroupDetailScreen({ route, navigation }) {
 
   async function fetchDismissals(uid) {
     if (!uid) return;
-    const { data } = await supabase.from('event_dismissals').select('event_id').eq('user_id', uid);
+    // Fetch all dismissed IDs (used to hide cards in the feed)
+    const { data } = await supabase
+      .from('event_dismissals')
+      .select('event_id, events!event_dismissals_event_id_fkey(group_id)')
+      .eq('user_id', uid);
     if (data) {
       const ids = new Set(data.map(d => d.event_id));
       setDismissedIds(ids);
-      setPastCount(ids.size);
+      // Only count dismissed events belonging to THIS group for the card
+      const groupCount = data.filter(d => d.events?.group_id === groupId).length;
+      setPastCount(groupCount);
     }
   }
 
