@@ -26,6 +26,13 @@ const NEXT_STATUSES = {
   heading_home: ['ended'],
 };
 
+// Attendance statuses for proper events (per-user)
+const ATTEND_STATUSES = [
+  { key: 'on_the_way', label: 'On the way 🚶', color: '#ff9f0a', bg: '#1f140a' },
+  { key: 'here', label: "I'm here 🟢", color: '#30d158', bg: '#0a1f0f' },
+  { key: 'heading_home', label: 'Heading home 🌙', color: '#636366', bg: '#1a1a1a' },
+];
+
 function isToday(dateStr) {
   if (!dateStr) return false;
   const d = new Date(dateStr);
@@ -83,7 +90,7 @@ export default function HomeScreen({ navigation }) {
   async function fetchEvents() {
     const { data } = await supabase
       .from('events')
-      .select('*, profiles!events_created_by_fkey(display_name, username), rsvps(user_id, status, profiles!rsvps_user_id_fkey(display_name, username))')
+      .select('*, profiles!events_created_by_fkey(display_name, username), rsvps(user_id, status, attendance_status, profiles!rsvps_user_id_fkey(display_name, username))')
       .order('created_at', { ascending: false });
 
     if (data) {
@@ -118,6 +125,15 @@ export default function HomeScreen({ navigation }) {
 
   async function updateStatus(eventId, status) {
     await supabase.from('events').update({ live_status: status }).eq('id', eventId);
+  }
+
+  async function updateAttendanceStatus(eventId, uid, status) {
+    if (!uid) return;
+    await supabase.from('rsvps').upsert(
+      { event_id: eventId, user_id: uid, status: 'going', attendance_status: status, updated_at: new Date().toISOString() },
+      { onConflict: 'event_id,user_id' }
+    );
+    fetchEvents();
   }
 
   function renderRightActions() {
@@ -160,6 +176,7 @@ export default function HomeScreen({ navigation }) {
 
     const isOwner = item.created_by === userId;
     const isLive = item.type === 'live';
+    const isProper = item.type === 'proper';
     const isHomeSafe = item.title === '🏠 Home Safe';
     const userName = item.profiles?.display_name || item.profiles?.username || 'Someone';
     const nextStatuses = isOwner && isLive ? (NEXT_STATUSES[item.live_status] || []) : [];
@@ -168,6 +185,11 @@ export default function HomeScreen({ navigation }) {
     const maybe = rsvps.filter(r => r.status === 'maybe');
     const myRsvp = rsvps.find(r => r.user_id === userId);
     const goingNames = going.map(r => r.profiles?.display_name || r.profiles?.username || 'Someone');
+
+    // Who's already at the event (has attendance_status = 'here')
+    const hereNames = going
+      .filter(r => r.attendance_status === 'here')
+      .map(r => r.profiles?.display_name || r.profiles?.username || 'Someone');
 
     const card = (
       <TouchableOpacity
@@ -203,7 +225,12 @@ export default function HomeScreen({ navigation }) {
 
         {!isHomeSafe && (going.length > 0 || maybe.length > 0 || myRsvp) && (
           <View style={styles.rsvpSummary}>
-            {going.length > 0 && (
+            {hereNames.length > 0 && (
+              <Text style={[styles.rsvpText, { color: '#30d158' }]}>
+                🟢 {hereNames.slice(0, 2).join(', ')}{hereNames.length > 2 ? ` +${hereNames.length - 2}` : ''} here
+              </Text>
+            )}
+            {going.length > 0 && hereNames.length === 0 && (
               <Text style={styles.rsvpText}>
                 🙋 {goingNames.slice(0, 2).join(', ')}{going.length > 2 ? ` +${going.length - 2}` : ''}
               </Text>
@@ -221,6 +248,7 @@ export default function HomeScreen({ navigation }) {
 
         <Text style={styles.author}>{isOwner ? 'You' : userName}</Text>
 
+        {/* Live event status buttons (owner only) */}
         {nextStatuses.length > 0 && (
           <View style={styles.statusBtns}>
             {nextStatuses.map(s => (
@@ -228,6 +256,27 @@ export default function HomeScreen({ navigation }) {
                 <Text style={styles.statusBtnText}>{STATUS_LABELS[s]}</Text>
               </TouchableOpacity>
             ))}
+          </View>
+        )}
+
+        {/* Proper event attendance status (anyone who RSVPed going/maybe) */}
+        {isProper && !item._ended && myRsvp && myRsvp.status !== 'not_going' && (
+          <View style={styles.attendBtns}>
+            {ATTEND_STATUSES.map(s => {
+              const isActive = myRsvp.attendance_status === s.key;
+              return (
+                <TouchableOpacity
+                  key={s.key}
+                  style={[styles.attendBtn, isActive && { borderColor: s.color, backgroundColor: s.bg }]}
+                  onPress={(e) => {
+                    e.stopPropagation?.();
+                    updateAttendanceStatus(item.id, userId, isActive ? null : s.key);
+                  }}
+                >
+                  <Text style={[styles.attendBtnText, isActive && { color: s.color }]}>{s.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         )}
       </TouchableOpacity>
@@ -321,6 +370,12 @@ const styles = StyleSheet.create({
   statusBtns: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 },
   statusBtn: { backgroundColor: '#2a2a2a', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
   statusBtnText: { color: '#ccc', fontSize: 12, fontWeight: '600' },
+  attendBtns: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 },
+  attendBtn: {
+    borderWidth: 1, borderColor: '#2a2a2a', borderRadius: 8,
+    paddingHorizontal: 10, paddingVertical: 6,
+  },
+  attendBtnText: { color: '#888', fontSize: 12, fontWeight: '600' },
   cardEnded: { opacity: 0.5 },
   sectionDivider: {
     color: '#444', fontSize: 11, fontWeight: '700', textTransform: 'uppercase',

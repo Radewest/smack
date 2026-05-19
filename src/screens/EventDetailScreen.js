@@ -24,6 +24,14 @@ const NEXT_STATUSES = {
   live: ['heading_home', 'ended'],
   heading_home: ['ended'],
 };
+
+// Per-user attendance statuses for proper events
+const ATTEND_STATUSES = [
+  { key: 'on_the_way', label: 'On the way 🚶', color: '#ff9f0a', bg: '#1f140a' },
+  { key: 'here', label: "I'm here 🟢", color: '#30d158', bg: '#0a1f0f' },
+  { key: 'heading_home', label: 'Heading home 🌙', color: '#636366', bg: '#1a1a1a' },
+];
+const ATTEND_LABELS = { on_the_way: '🚶 On the way', here: '🟢 Here', heading_home: '🌙 Heading home' };
 const RSVP_OPTIONS = [
   { status: 'going', label: "I'm keen 🙋", activeColor: '#30d158', activeBg: '#0a1f0f' },
   { status: 'maybe', label: 'Maybe 🤔', activeColor: '#ff9f0a', activeBg: '#1f150a' },
@@ -35,6 +43,7 @@ export default function EventDetailScreen({ route, navigation }) {
   const [event, setEvent] = useState(null);
   const [rsvps, setRsvps] = useState([]);
   const [myRsvp, setMyRsvp] = useState(null);
+  const [myAttendance, setMyAttendance] = useState(null);
   const [userId, setUserId] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -76,6 +85,7 @@ export default function EventDetailScreen({ route, navigation }) {
       setRsvps(data);
       const mine = data.find(r => r.user_id === uid);
       setMyRsvp(mine?.status ?? null);
+      setMyAttendance(mine?.attendance_status ?? null);
     }
   }
 
@@ -98,6 +108,17 @@ export default function EventDetailScreen({ route, navigation }) {
     await supabase.from('events').update({ live_status: status }).eq('id', eventId);
   }
 
+  async function updateAttendanceStatus(status) {
+    if (!userId) return;
+    const newStatus = myAttendance === status ? null : status;
+    setMyAttendance(newStatus);
+    await supabase.from('rsvps').upsert(
+      { event_id: eventId, user_id: userId, status: myRsvp || 'going', attendance_status: newStatus, updated_at: new Date().toISOString() },
+      { onConflict: 'event_id,user_id' }
+    );
+    fetchRsvps(userId);
+  }
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -110,9 +131,11 @@ export default function EventDetailScreen({ route, navigation }) {
 
   const isOwner = event.created_by === userId;
   const isLive = event.type === 'live';
+  const isProper = event.type === 'proper';
   const isHomeSafe = event.title === '🏠 Home Safe';
   const userName = event.profiles?.display_name || event.profiles?.username || 'Someone';
   const nextStatuses = isOwner && isLive ? (NEXT_STATUSES[event.live_status] || []) : [];
+  const canSetAttendance = isProper && myRsvp && myRsvp !== 'not_going' && event.live_status !== 'ended';
 
   const going = rsvps.filter(r => r.status === 'going');
   const maybe = rsvps.filter(r => r.status === 'maybe');
@@ -211,6 +234,27 @@ export default function EventDetailScreen({ route, navigation }) {
           </View>
         )}
 
+        {/* Attendance status buttons for proper events */}
+        {canSetAttendance && (
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>Where are you?</Text>
+            <View style={styles.attendRow}>
+              {ATTEND_STATUSES.map(s => {
+                const isActive = myAttendance === s.key;
+                return (
+                  <TouchableOpacity
+                    key={s.key}
+                    style={[styles.attendBtn, isActive && { borderColor: s.color, backgroundColor: s.bg }]}
+                    onPress={() => updateAttendanceStatus(s.key)}
+                  >
+                    <Text style={[styles.attendBtnText, isActive && { color: s.color }]}>{s.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
         {/* Who's going */}
         {(going.length > 0 || maybe.length > 0) && (
           <View style={styles.section}>
@@ -225,7 +269,9 @@ export default function EventDetailScreen({ route, navigation }) {
                 <Text style={styles.attendeeName}>
                   {r.profiles?.display_name || r.profiles?.username || 'Someone'}
                 </Text>
-                <Text style={styles.attendeeStatus}>🙋 Keen</Text>
+                <Text style={styles.attendeeStatus}>
+                  {r.attendance_status ? ATTEND_LABELS[r.attendance_status] : '🙋 Keen'}
+                </Text>
               </View>
             ))}
             {maybe.map(r => (
@@ -234,7 +280,9 @@ export default function EventDetailScreen({ route, navigation }) {
                 <Text style={styles.attendeeName}>
                   {r.profiles?.display_name || r.profiles?.username || 'Someone'}
                 </Text>
-                <Text style={styles.attendeeStatus}>🤔 Maybe</Text>
+                <Text style={styles.attendeeStatus}>
+                  {r.attendance_status ? ATTEND_LABELS[r.attendance_status] : '🤔 Maybe'}
+                </Text>
               </View>
             ))}
           </View>
@@ -306,4 +354,10 @@ const styles = StyleSheet.create({
   attendeeDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#30d158' },
   attendeeName: { color: '#fff', fontSize: 14, flex: 1 },
   attendeeStatus: { color: '#555', fontSize: 13 },
+  attendRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  attendBtn: {
+    borderWidth: 1, borderColor: '#2a2a2a', borderRadius: 10,
+    paddingHorizontal: 12, paddingVertical: 8,
+  },
+  attendBtnText: { color: '#888', fontSize: 13, fontWeight: '600' },
 });

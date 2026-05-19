@@ -17,12 +17,39 @@ export default function PastEventsScreen({ navigation }) {
   }, []);
 
   async function fetchEvents(uid) {
-    const { data } = await supabase
+    if (!uid) return;
+
+    // Step 1: get dismissed event IDs + timestamps for this user
+    const { data: dismissals, error: dErr } = await supabase
       .from('event_dismissals')
-      .select('dismissed_at, events(*, profiles!events_created_by_fkey(display_name, username))')
+      .select('event_id, dismissed_at')
       .eq('user_id', uid)
       .order('dismissed_at', { ascending: false });
-    if (data) setEvents(data.map(d => ({ ...d.events, dismissed_at: d.dismissed_at })));
+
+    if (dErr || !dismissals || dismissals.length === 0) {
+      setEvents([]);
+      setRefreshing(false);
+      return;
+    }
+
+    const ids = dismissals.map(d => d.event_id);
+
+    // Step 2: fetch the actual events
+    const { data: eventsData } = await supabase
+      .from('events')
+      .select('*, profiles!events_created_by_fkey(display_name, username)')
+      .in('id', ids);
+
+    if (eventsData) {
+      // Re-order to match dismissal order and attach dismissed_at
+      const dismissalMap = Object.fromEntries(dismissals.map(d => [d.event_id, d.dismissed_at]));
+      const sorted = ids
+        .map(id => eventsData.find(e => e.id === id))
+        .filter(Boolean)
+        .map(e => ({ ...e, dismissed_at: dismissalMap[e.id] }));
+      setEvents(sorted);
+    }
+
     setRefreshing(false);
   }
 
@@ -33,7 +60,6 @@ export default function PastEventsScreen({ navigation }) {
 
   function renderEvent({ item }) {
     const isLive = item.type === 'live';
-    const isHomeSafe = item.title === '🏠 Home Safe';
     const userName = item.profiles?.display_name || item.profiles?.username || 'Someone';
     const isOwner = item.created_by === userId;
 
