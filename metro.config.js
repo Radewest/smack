@@ -1,11 +1,15 @@
 const { getDefaultConfig } = require('expo/metro-config');
+const path = require('path');
 
 const config = getDefaultConfig(__dirname);
 
-// @supabase/realtime-js bundles `ws` which requires Node's `stream` module.
-// React Native doesn't have it — map it to the browser-compatible polyfill.
+// @supabase/realtime-js bundles a copy of `ws` (a Node.js WebSocket library).
+// `ws` pulls in Node built-ins (stream, zlib, net, tls…) that don't exist in
+// React Native. Fix: redirect every import of `ws` to a tiny shim that
+// re-exports the native global WebSocket — which is what supabase actually
+// uses at runtime on mobile anyway.
 config.resolver.extraNodeModules = {
-  stream: require.resolve('readable-stream'),
+  ws: path.resolve(__dirname, 'shims/ws.js'),
 };
 
 module.exports = config;
