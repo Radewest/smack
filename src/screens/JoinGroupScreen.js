@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
     textAlign: 'center', width: '100%', marginBottom: 20,
   },
   joinBtn: {
-    backgroundColor: '#ff3b30', borderRadius: 12,
+    backgroundColor: '#2ee6d6', borderRadius: 12,
     paddingVertical: 16, width: '100%', alignItems: 'center',
   },
   joinBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },

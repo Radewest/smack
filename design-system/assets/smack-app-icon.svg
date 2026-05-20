@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <radialGradient id="aiBg" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#10162a"></stop>
+      <stop offset="100%" stop-color="#04060c"></stop>
+    </radialGradient>
+    <radialGradient id="aiNucleus" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff"></stop>
+      <stop offset="25%" stop-color="#a8fff5"></stop>
+      <stop offset="65%" stop-color="#5af2e6"></stop>
+      <stop offset="100%" stop-color="#2ee6d6"></stop>
+    </radialGradient>
+    <radialGradient id="aiAmbient" cx="50%" cy="40%" r="50%">
+      <stop offset="0%" stop-color="#5af2e6" stop-opacity="0.65"></stop>
+      <stop offset="50%" stop-color="#2ee6d6" stop-opacity="0.2"></stop>
+      <stop offset="100%" stop-color="#2ee6d6" stop-opacity="0"></stop>
+    </radialGradient>
+    <linearGradient id="aiTrail" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#2ee6d6" stop-opacity="0.9"></stop>
+      <stop offset="100%" stop-color="#2ee6d6" stop-opacity="0"></stop>
+    </linearGradient>
+  </defs>
+
+  <rect width="1024" height="1024" fill="url(#aiBg)"></rect>
+
+  
+  <circle cx="200" cy="200" r="3" fill="#a06bff" opacity="0.5"></circle>
+  <circle cx="850" cy="180" r="2" fill="#ffb547" opacity="0.6"></circle>
+  <circle cx="900" cy="800" r="2.5" fill="#2ee6d6" opacity="0.5"></circle>
+  <circle cx="140" cy="850" r="2" fill="#ff5eb8" opacity="0.4"></circle>
+
+  <g transform="translate(192,192) scale(3.2)">
+    <circle cx="100" cy="96" r="92" fill="url(#aiAmbient)"></circle>
+    <ellipse cx="100" cy="96" rx="44" ry="40" fill="none" stroke="#5af2e6" stroke-opacity="0.7" stroke-width="3"></ellipse>
+    <circle cx="100" cy="96" r="14" fill="url(#aiNucleus)"></circle>
+    <path d="M86 142 C 84 168, 90 188, 86 214" stroke="url(#aiTrail)" stroke-width="2.5" stroke-linecap="round" fill="none"></path>
+    <path d="M114 144 C 116 168, 110 188, 114 214" stroke="url(#aiTrail)" stroke-width="2.5" stroke-linecap="round" fill="none"></path>
+  </g>
+</svg>

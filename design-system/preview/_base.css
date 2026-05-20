@@ -1,0 +1,36 @@
+/* Shared preview-card base. Cards target ~700px wide. */
+@import url('../colors_and_type.css');
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--c-deep-solid);
+  color: var(--c-fg);
+  font-family: var(--f-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.card {
+  padding: 20px 24px;
+  min-height: 100px;
+}
+
+.row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.col { display: flex; flex-direction: column; gap: 8px; }
+.stack-4 { display: flex; flex-direction: column; gap: 4px; }
+.stack-8 { display: flex; flex-direction: column; gap: 8px; }
+.stack-12 { display: flex; flex-direction: column; gap: 12px; }
+
+.swatch {
+  width: 88px;
+  flex-shrink: 0;
+}
+.swatch-chip {
+  height: 64px;
+  border-radius: 10px;
+  border: 1px solid #ffffff10;
+  margin-bottom: 6px;
+}
+.swatch-name { font-size: 11px; font-weight: 600; color: var(--c-fg-2); }
+.swatch-hex  { font-family: var(--f-mono); font-size: 10px; color: var(--c-fg-3); }
+.swatch-var  { font-family: var(--f-mono); font-size: 10px; color: var(--c-fg-4); }

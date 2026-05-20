@@ -1,0 +1,37 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="_base.css">
+<style>
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.55;transform:scale(1.3)} }
+.pulse { animation: pulse 1800ms ease-in-out infinite; }
+</style>
+</head>
+<body>
+<div class="card" style="padding:18px 20px;">
+  <div style="display:flex; flex-wrap:wrap; gap:8px;">
+    <!-- Live pill -->
+    <div style="display:inline-flex; align-items:center; gap:8px; background:#0e2a1d; border:1px solid #1f5a3b; border-radius:999px; padding:6px 12px;">
+      <div class="pulse" style="width:8px; height:8px; border-radius:50%; background:#3ff09a; box-shadow: 0 0 10px #3ff09acc;"></div>
+      <span style="color:#3ff09a; font-size:13px; font-weight:600;">Live now 🟢</span>
+    </div>
+    <!-- OTW pill -->
+    <div style="display:inline-flex; align-items:center; gap:6px; background:#2a1f0a; border:1px solid #5a4019; border-radius:999px; padding:6px 12px;">
+      <span style="color:#ffb547; font-size:13px; font-weight:600;">On the way 🚶</span>
+    </div>
+    <!-- Home pill -->
+    <div style="display:inline-flex; align-items:center; gap:6px; background:#181d2e; border:1px solid #2f3550; border-radius:999px; padding:6px 12px;">
+      <span style="color:#8a92b8; font-size:13px; font-weight:600;">Heading home 🌙</span>
+    </div>
+    <!-- Ended -->
+    <div style="display:inline-flex; align-items:center; gap:6px; background:#0d1220; border:1px solid var(--c-shore); border-radius:999px; padding:6px 12px;">
+      <span style="color:#4a5278; font-size:13px; font-weight:600;">Ended</span>
+    </div>
+  </div>
+  <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:14px;">
+    <!-- Event type badges -->
+    <div style="background:#1a2a0a; padding:4px 10px; border-radius:6px;"><span style="color:var(--c-fg-2); font-size:11px; font-weight:600;">⚡ Live</span></div>
+    <div style="background:#0a1a2a; padding:4px 10px; border-radius:6px;"><span style="color:var(--c-fg-2); font-size:11px; font-weight:600;">📅 Today</span></div>
+    <div style="background:#0a1a2a; padding:4px 10px; border-radius:6px;"><span style="color:var(--c-fg-2); font-size:11px; font-weight:600;">📅 Event</span></div>
+    <div style="background:#2a1a00; padding:4px 10px; border-radius:6px;"><span style="color:#ffb547; font-size:11px; font-weight:600;">You're keen</span></div>
+  </div>
+</div>
+</body></html>

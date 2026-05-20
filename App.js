@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import * as Linking from 'expo-linking';
+import * as Notifications from 'expo-notifications';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -17,13 +18,14 @@ const linking = {
   config: { screens: { Main: '', Login: 'auth/confirm' } },
 };
 
-function AuthedApp() {
-  usePushNotifications();
+function AuthedApp({ navigationRef }) {
+  usePushNotifications(navigationRef);
   return <AppNavigator />;
 }
 
 export default function App() {
   const [session, setSession] = useState(undefined);
+  const navigationRef = useRef(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
@@ -37,10 +39,12 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
     <SafeAreaProvider>
       <StatusBar style="light" />
-      <NavigationContainer linking={linking}>
+      <NavigationContainer ref={navigationRef} linking={linking}>
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           {session ? (
-            <Stack.Screen name="Main" component={AuthedApp} />
+            <Stack.Screen name="Main">
+              {() => <AuthedApp navigationRef={navigationRef} />}
+            </Stack.Screen>
           ) : (
             <Stack.Screen name="Login" component={LoginScreen} />
           )}

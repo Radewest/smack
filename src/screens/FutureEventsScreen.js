@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
     marginBottom: 10, borderWidth: 1, borderColor: '#2a2a2a', overflow: 'hidden',
   },
   dateStrip: {
-    width: 52, backgroundColor: '#ff3b30', alignItems: 'center',
+    width: 52, backgroundColor: '#2ee6d6', alignItems: 'center',
     justifyContent: 'center', paddingVertical: 14, gap: 2,
   },
   dateDay: { color: 'rgba(255,255,255,0.7)', fontSize: 10, fontWeight: '700' },

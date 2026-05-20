@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 240">
+  <defs>
+    <radialGradient id="nucleus2" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff"></stop>
+      <stop offset="25%" stop-color="#a8fff5"></stop>
+      <stop offset="65%" stop-color="#5af2e6"></stop>
+      <stop offset="100%" stop-color="#2ee6d6"></stop>
+    </radialGradient>
+    <radialGradient id="ambient2" cx="50%" cy="40%" r="50%">
+      <stop offset="0%" stop-color="#5af2e6" stop-opacity="0.55"></stop>
+      <stop offset="50%" stop-color="#2ee6d6" stop-opacity="0.18"></stop>
+      <stop offset="100%" stop-color="#2ee6d6" stop-opacity="0"></stop>
+    </radialGradient>
+    <linearGradient id="trail2" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#2ee6d6" stop-opacity="0.85"></stop>
+      <stop offset="100%" stop-color="#2ee6d6" stop-opacity="0"></stop>
+    </linearGradient>
+    <filter id="textGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="2" result="b"></feGaussianBlur>
+      <feMerge><feMergeNode in="b"></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge>
+    </filter>
+  </defs>
+
+  <g transform="translate(0,0)">
+    <circle cx="100" cy="96" r="92" fill="url(#ambient2)"></circle>
+    <ellipse cx="100" cy="96" rx="44" ry="40" fill="none" stroke="#5af2e6" stroke-opacity="0.7" stroke-width="3"></ellipse>
+    <circle cx="100" cy="96" r="14" fill="url(#nucleus2)"></circle>
+    <path d="M86 142 C 84 168, 90 188, 86 214" stroke="url(#trail2)" stroke-width="2.5" stroke-linecap="round" fill="none"></path>
+    <path d="M114 144 C 116 168, 110 188, 114 214" stroke="url(#trail2)" stroke-width="2.5" stroke-linecap="round" fill="none"></path>
+  </g>
+
+  <text x="210" y="140" font-family="Geist, -apple-system, &#39;Segoe UI&#39;, system-ui, sans-serif" font-weight="900" font-size="110" letter-spacing="-4" fill="#f3f5ff" filter="url(#textGlow)">smack</text>
+</svg>

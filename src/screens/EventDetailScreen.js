@@ -138,7 +138,7 @@ export default function EventDetailScreen({ route, navigation }) {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <ActivityIndicator color="#ff3b30" style={{ marginTop: 40 }} />
+        <ActivityIndicator color="#2ee6d6" style={{ marginTop: 40 }} />
       </SafeAreaView>
     );
   }
@@ -184,7 +184,7 @@ export default function EventDetailScreen({ route, navigation }) {
         <View style={styles.metaBox}>
           {event.location ? (
             <TouchableOpacity style={styles.metaRow} onPress={() => openMaps(event.location)} activeOpacity={0.7}>
-              <Ionicons name="location" size={16} color="#ff3b30" />
+              <Ionicons name="location" size={16} color="#2ee6d6" />
               <Text style={[styles.metaText, styles.locationText]}>{event.location}</Text>
               <Ionicons name="chevron-forward" size={14} color="#555" />
             </TouchableOpacity>

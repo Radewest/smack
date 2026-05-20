@@ -15,9 +15,22 @@ Notifications.setNotificationHandler({
 
 const isExpoGo = Constants.appOwnership === 'expo';
 
-export function usePushNotifications() {
+export function usePushNotifications(navigationRef) {
   useEffect(() => {
     if (!isExpoGo) register();
+
+    // Handle notification taps — navigate to the relevant event
+    const sub = Notifications.addNotificationResponseReceivedListener(response => {
+      const { event_id } = response.notification.request.content.data ?? {};
+      if (event_id && navigationRef?.current) {
+        navigationRef.current.navigate('Main', {
+          screen: 'EventDetail',
+          params: { eventId: event_id },
+        });
+      }
+    });
+
+    return () => sub.remove();
   }, []);
 
   async function register() {

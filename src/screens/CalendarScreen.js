@@ -25,7 +25,7 @@ export default function CalendarScreen() {
       const marks = {};
       data.forEach(e => {
         const d = e.starts_at.split('T')[0];
-        marks[d] = { marked: true, dotColor: '#ff3b30' };
+        marks[d] = { marked: true, dotColor: '#2ee6d6' };
       });
       setMarkedDates(marks);
     }
@@ -39,7 +39,7 @@ export default function CalendarScreen() {
   const combined = {
     ...markedDates,
     ...(selectedDate
-      ? { [selectedDate]: { ...(markedDates[selectedDate] || {}), selected: true, selectedColor: '#ff3b30' } }
+      ? { [selectedDate]: { ...(markedDates[selectedDate] || {}), selected: true, selectedColor: '#2ee6d6' } }
       : {}),
   };
 
@@ -55,14 +55,14 @@ export default function CalendarScreen() {
           backgroundColor: '#0d0d0d',
           calendarBackground: '#0d0d0d',
           textSectionTitleColor: '#555',
-          selectedDayBackgroundColor: '#ff3b30',
+          selectedDayBackgroundColor: '#2ee6d6',
           selectedDayTextColor: '#fff',
-          todayTextColor: '#ff3b30',
+          todayTextColor: '#2ee6d6',
           dayTextColor: '#fff',
           textDisabledColor: '#333',
-          dotColor: '#ff3b30',
+          dotColor: '#2ee6d6',
           selectedDotColor: '#fff',
-          arrowColor: '#ff3b30',
+          arrowColor: '#2ee6d6',
           monthTextColor: '#fff',
           textDayFontWeight: '500',
           textMonthFontWeight: '700',

@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 240" fill="none">
+  
+  <defs>
+    <radialGradient id="nucleus" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff"></stop>
+      <stop offset="25%" stop-color="#a8fff5"></stop>
+      <stop offset="65%" stop-color="#5af2e6"></stop>
+      <stop offset="100%" stop-color="#2ee6d6"></stop>
+    </radialGradient>
+    <radialGradient id="ambient" cx="50%" cy="40%" r="50%">
+      <stop offset="0%" stop-color="#5af2e6" stop-opacity="0.55"></stop>
+      <stop offset="50%" stop-color="#2ee6d6" stop-opacity="0.18"></stop>
+      <stop offset="100%" stop-color="#2ee6d6" stop-opacity="0"></stop>
+    </radialGradient>
+    <linearGradient id="trail" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#2ee6d6" stop-opacity="0.85"></stop>
+      <stop offset="100%" stop-color="#2ee6d6" stop-opacity="0"></stop>
+    </linearGradient>
+  </defs>
+
+  
+  <circle cx="100" cy="96" r="92" fill="url(#ambient)"></circle>
+
+  
+  <ellipse cx="100" cy="96" rx="44" ry="40" fill="none" stroke="#5af2e6" stroke-opacity="0.7" stroke-width="3"></ellipse>
+
+  
+  <circle cx="100" cy="96" r="14" fill="url(#nucleus)"></circle>
+
+  
+  <path d="M86 142 C 84 168, 90 188, 86 214" stroke="url(#trail)" stroke-width="2.5" stroke-linecap="round" fill="none"></path>
+  <path d="M114 144 C 116 168, 110 188, 114 214" stroke="url(#trail)" stroke-width="2.5" stroke-linecap="round" fill="none"></path>
+</svg>

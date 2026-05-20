@@ -84,7 +84,7 @@ export default function GroupMembersScreen({ route, navigation }) {
             <Text style={styles.inviteCode}>{inviteCode}</Text>
           </View>
           <View style={styles.shareBtn}>
-            <Ionicons name="share-outline" size={18} color="#ff3b30" />
+            <Ionicons name="share-outline" size={18} color="#2ee6d6" />
             <Text style={styles.shareText}>Share</Text>
           </View>
         </TouchableOpacity>
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
   inviteLabel: { color: '#555', fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
   inviteCode: { color: '#fff', fontSize: 28, fontWeight: '900', letterSpacing: 6 },
   shareBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  shareText: { color: '#ff3b30', fontWeight: '700', fontSize: 14 },
+  shareText: { color: '#2ee6d6', fontWeight: '700', fontSize: 14 },
   list: { padding: 16, paddingTop: 8 },
   sectionLabel: {
     color: '#555', fontSize: 12, fontWeight: '600',

@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
   },
   heading: { color: '#fff', fontSize: 16, fontWeight: '700' },
   cancel: { color: '#888', fontSize: 16 },
-  done: { color: '#ff3b30', fontSize: 16, fontWeight: '700' },
+  done: { color: '#2ee6d6', fontSize: 16, fontWeight: '700' },
   disabled: { opacity: 0.4 },
   form: { padding: 20, gap: 12 },
   typeRow: {

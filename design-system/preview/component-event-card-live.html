@@ -1,0 +1,41 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="_base.css">
+<style>
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.55;transform:scale(1.25)} }
+.pulse { animation: pulse 1800ms ease-in-out infinite; }
+</style>
+</head>
+<body>
+<div class="card" style="padding:18px 20px;">
+
+  <!-- The Event Card — Live -->
+  <div style="background: var(--c-ink); border:1px solid var(--c-shore); border-radius:14px; padding:16px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+      <div style="display:flex; align-items:center; gap:10px; flex:1; min-width:0;">
+        <div class="pulse" style="width:9px; height:9px; border-radius:50%; background:#3ff09a; box-shadow:0 0 14px #3ff09acc;"></div>
+        <div style="color:var(--c-fg); font-weight:700; font-size:16px;">The Crown, Shoreditch</div>
+      </div>
+      <div style="background:#1a2a0a; padding:3px 8px; border-radius:6px;"><span style="color:var(--c-fg-2); font-size:11px; font-weight:600;">⚡ Live</span></div>
+    </div>
+
+    <div style="color:var(--c-status-live); font-size:13px; font-weight:600; margin-bottom:8px;">Live now 🟢</div>
+
+    <!-- attendance strip -->
+    <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+      <span style="color:#3ff09a; font-size:12px;">🟢 Cara, Ben +2 here</span>
+      <span style="color:var(--c-fg-3); font-size:12px;">🤔 2 maybe</span>
+      <span style="background:#2a1f0a; color:#ffb547; font-size:12px; font-weight:600; padding:2px 8px; border-radius:6px;">You're keen</span>
+    </div>
+
+    <!-- reactions -->
+    <div style="display:flex; gap:6px; align-items:center;">
+      <div style="background:#242b40; border:1px solid var(--c-shore); border-radius:20px; padding:4px 10px; display:flex; gap:3px; align-items:center;"><span>🔥</span><span style="color:var(--c-fg-2); font-size:12px; font-weight:600;">4</span></div>
+      <div style="background:#2a1f0a; border:1px solid #ffb547; border-radius:20px; padding:4px 10px; display:flex; gap:3px; align-items:center;"><span>🍻</span><span style="color:#ffb547; font-size:12px; font-weight:600;">3</span></div>
+      <div style="background:#242b40; border:1px solid var(--c-shore); border-radius:20px; padding:4px 10px;"><span style="color:var(--c-fg-4); font-size:14px;">+</span></div>
+    </div>
+
+    <div style="color:var(--c-fg-4); font-size:11px; margin-top:8px;">Tom · 4m ago</div>
+  </div>
+
+</div>
+</body></html>

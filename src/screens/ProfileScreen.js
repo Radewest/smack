@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
   initials: { color: '#fff', fontSize: 30, fontWeight: '700' },
   avatarEdit: {
     position: 'absolute', bottom: 0, right: 0,
-    backgroundColor: '#ff3b30', borderRadius: 12,
+    backgroundColor: '#2ee6d6', borderRadius: 12,
     width: 24, height: 24, alignItems: 'center', justifyContent: 'center',
   },
   avatarEditText: { fontSize: 12 },
@@ -326,7 +326,7 @@ const styles = StyleSheet.create({
   },
   bioInput: { height: 90, textAlignVertical: 'top', paddingTop: 12 },
   saveBtn: {
-    backgroundColor: '#ff3b30', borderRadius: 12,
+    backgroundColor: '#2ee6d6', borderRadius: 12,
     paddingVertical: 14, alignItems: 'center', marginBottom: 28,
   },
   saveBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },

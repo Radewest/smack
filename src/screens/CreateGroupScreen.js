@@ -81,7 +81,7 @@ export default function CreateGroupScreen({ navigation }) {
         <Text style={styles.heading}>New Group</Text>
         <TouchableOpacity onPress={handleCreate} disabled={loading || !name.trim()}>
           {loading
-            ? <ActivityIndicator color="#ff3b30" />
+            ? <ActivityIndicator color="#2ee6d6" />
             : <Text style={[styles.create, !name.trim() && styles.disabled]}>Create</Text>
           }
         </TouchableOpacity>
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
   },
   heading: { color: '#fff', fontSize: 16, fontWeight: '700' },
   cancel: { color: '#888', fontSize: 16 },
-  create: { color: '#ff3b30', fontSize: 16, fontWeight: '700' },
+  create: { color: '#2ee6d6', fontSize: 16, fontWeight: '700' },
   disabled: { opacity: 0.4 },
   body: { padding: 24, gap: 16 },
   emojiPreview: {

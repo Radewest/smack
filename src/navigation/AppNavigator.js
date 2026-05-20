@@ -13,6 +13,8 @@ import CreateEventScreen from '../screens/CreateEventScreen';
 import EventDetailScreen from '../screens/EventDetailScreen';
 import FutureEventsScreen from '../screens/FutureEventsScreen';
 import PastEventsScreen from '../screens/PastEventsScreen';
+import DiscoverScreen from '../screens/DiscoverScreen';
+import DiscoverEventDetailScreen from '../screens/DiscoverEventDetailScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -23,7 +25,7 @@ function Tabs() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: styles.tabBar,
-        tabBarActiveTintColor: '#ff3b30',
+        tabBarActiveTintColor: '#2ee6d6',
         tabBarInactiveTintColor: '#555',
         tabBarShowLabel: true,
         tabBarLabelStyle: { fontSize: 11, marginBottom: 4 },
@@ -38,6 +40,11 @@ function Tabs() {
         name="Calendar"
         component={CalendarScreen}
         options={{ tabBarIcon: ({ color }) => <Ionicons name="calendar" size={22} color={color} /> }}
+      />
+      <Tab.Screen
+        name="Discover"
+        component={DiscoverScreen}
+        options={{ tabBarIcon: ({ color }) => <Ionicons name="compass" size={22} color={color} /> }}
       />
       <Tab.Screen
         name="Profile"
@@ -58,19 +65,4 @@ export default function AppNavigator() {
       <Stack.Screen name="JoinGroup" component={JoinGroupScreen} options={{ presentation: 'modal' }} />
       <Stack.Screen name="CreateEvent" component={CreateEventScreen} options={{ presentation: 'modal' }} />
       <Stack.Screen name="EventDetail" component={EventDetailScreen} />
-      <Stack.Screen name="FutureEvents" component={FutureEventsScreen} />
-      <Stack.Screen name="PastEvents" component={PastEventsScreen} />
-    </Stack.Navigator>
-  );
-}
-
-const styles = StyleSheet.create({
-  tabBar: {
-    backgroundColor: '#0d0d0d',
-    borderTopColor: '#1f1f1f',
-    borderTopWidth: 1,
-    height: 80,
-    paddingBottom: 12,
-    paddingTop: 6,
-  },
-});
+      <Stack.Screen name="FutureEvents" component={Fut

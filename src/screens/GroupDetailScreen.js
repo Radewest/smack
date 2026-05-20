@@ -456,8 +456,8 @@ const styles = StyleSheet.create({
   fab: {
     position: 'absolute', bottom: 30, right: 24,
     width: 54, height: 54, borderRadius: 27,
-    backgroundColor: '#ff3b30', alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#ff3b30', shadowOffset: { width: 0, height: 4 },
+    backgroundColor: '#2ee6d6', alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#2ee6d6', shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5, shadowRadius: 8, elevation: 8,
   },
   fabIcon: { color: '#fff', fontSize: 30, fontWeight: '300', lineHeight: 34 },

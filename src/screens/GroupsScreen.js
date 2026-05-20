@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
   emptyTitle: { color: '#fff', fontSize: 20, fontWeight: '800', marginBottom: 8 },
   emptySub: { color: '#555', fontSize: 14, textAlign: 'center', lineHeight: 20, marginBottom: 32 },
   emptyBtn: {
-    backgroundColor: '#ff3b30', borderRadius: 12,
+    backgroundColor: '#2ee6d6', borderRadius: 12,
     paddingVertical: 14, paddingHorizontal: 32, marginBottom: 10, width: '100%', alignItems: 'center',
   },
   emptyBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
@@ -133,8 +133,8 @@ const styles = StyleSheet.create({
   fab: {
     position: 'absolute', bottom: 30, right: 24,
     width: 54, height: 54, borderRadius: 27,
-    backgroundColor: '#ff3b30', alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#ff3b30', shadowOffset: { width: 0, height: 4 },
+    backgroundColor: '#2ee6d6', alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#2ee6d6', shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5, shadowRadius: 8, elevation: 8,
   },
   fabIcon: { color: '#fff', fontSize: 30, fontWeight: '300', lineHeight: 34 },

@@ -21,7 +21,11 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
+      "package": "com.radewest.smack"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -30,8 +34,15 @@
       "@react-native-community/datetimepicker",
       [
         "expo-image-picker",
-        { "photosPermission": "Smack needs access to your photos to set a profile picture." }
+        {
+          "photosPermission": "Smack needs access to your photos to set a profile picture."
+        }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "99202288-05d4-4f33-81d3-3da152b578f9"
+      }
+    }
   }
 }

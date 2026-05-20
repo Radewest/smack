@@ -1,0 +1,250 @@
+/* =========================================================
+   Smack Design System — Colors & Type
+   App: Smack (Friend events app, React Native / Expo)
+   Direction: deep ocean dark, bioluminescent glows,
+   jellyfish-at-night energy.
+   ========================================================= */
+
+/* -----------------------
+   Typography
+   -----------------------
+   Primary: Geist (Vercel) — clean, neutral, modern sans-serif
+   with a full 100–900 weight range. The Smack wordmark uses
+   black weight (900) at tight tracking. Avoids "playful/rounded"
+   per brief.
+   Mono: Geist Mono (used sparingly — invite codes, debug).
+   ---------------------- */
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800;900&family=Geist+Mono:wght@400;500;600&display=swap');
+
+:root {
+  /* ---------- Color: Ocean (backgrounds & surfaces) ---------- */
+  --c-abyss:       #04060c;  /* deepest — beneath surface  */
+  --c-deep:        #07091344; /* page bg w/ violet undertone */
+  --c-deep-solid:  #080b14;  /* page bg solid              */
+  --c-ink:         #0d1220;  /* card bg base               */
+  --c-ink-2:       #141a2c;  /* card bg raised             */
+  --c-ink-3:       #1c2440;  /* hover / pressed surface    */
+  --c-shore:       #2a3354;  /* divider, border subtle     */
+  --c-shore-2:     #3a4570;  /* divider, border high       */
+
+  /* ---------- Color: Foreground ---------- */
+  --c-fg:          #f3f5ff;  /* primary text — soft white  */
+  --c-fg-2:        #b8bedb;  /* secondary text             */
+  --c-fg-3:        #7a82a5;  /* tertiary, meta, labels     */
+  --c-fg-4:        #4a5278;  /* faint, disabled, dividers  */
+
+  /* ---------- Color: Glow (brand accents) ---------- */
+  /* The "lit-up jellyfish" palette. Use sparingly — these
+     pop against the dark surfaces. */
+  --c-glow-cyan:   #2ee6d6;  /* primary brand — electric teal */
+  --c-glow-cyan-2: #5af2e6;  /* hover / brighter            */
+  --c-glow-cyan-soft: #2ee6d61a; /* 10% — pill backgrounds  */
+  --c-glow-amber:  #ffb547;  /* secondary — warm festival   */
+  --c-glow-amber-soft: #ffb5471a;
+  --c-glow-violet: #a06bff;  /* tertiary — dusk             */
+  --c-glow-violet-soft: #a06bff1a;
+  --c-glow-pink:   #ff5eb8;  /* highlight — rare            */
+
+  /* ---------- Color: Semantic Status ---------- */
+  /* Logic preserved from existing codebase, refined toward
+     bioluminescent. Pair fg with bg variant on dark surfaces. */
+  --c-status-live:        #3ff09a;  /* was #30d158 → brighter glow */
+  --c-status-live-bg:     #0e2a1d;
+  --c-status-live-border: #1f5a3b;
+
+  --c-status-otw:         #ffb547;  /* was #ff9f0a → warm amber    */
+  --c-status-otw-bg:      #2a1f0a;
+  --c-status-otw-border:  #5a4019;
+
+  --c-status-home:        #8a92b8;  /* was #636366 → cool dusk     */
+  --c-status-home-bg:     #181d2e;
+  --c-status-home-border: #2f3550;
+
+  --c-status-ended:       #4a5278;
+
+  --c-status-keen:        var(--c-status-live);
+  --c-status-maybe:       var(--c-status-otw);
+  --c-status-cant:        var(--c-status-home);
+
+  /* Destructive (use rarely — sign out, archive) */
+  --c-danger:      #ff5e62;
+  --c-danger-bg:   #2a1014;
+
+  /* ---------- Type: Family ---------- */
+  --f-sans:  'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --f-mono:  'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --f-display: var(--f-sans); /* same family, heaviest weight */
+
+  /* ---------- Type: Scale ---------- */
+  /* iOS/Android native scale. Pair with --lh-* for line height. */
+  --fs-display: 48px;  /* Smack wordmark, login                */
+  --fs-h1:      28px;  /* Screen headings (Profile, Calendar)  */
+  --fs-h2:      22px;  /* Event detail title                   */
+  --fs-h3:      17px;  /* Group name in header                 */
+  --fs-body:    16px;  /* Default body, inputs                 */
+  --fs-card:    16px;  /* Card titles                          */
+  --fs-meta:    13px;  /* Location, time, secondary meta       */
+  --fs-label:   12px;  /* SECTION LABELS, uppercased           */
+  --fs-micro:   11px;  /* Badges, footnotes, author            */
+
+  /* ---------- Type: Weight ---------- */
+  --fw-light:   300;
+  --fw-regular: 400;
+  --fw-medium:  500;
+  --fw-semi:    600;
+  --fw-bold:    700;
+  --fw-heavy:   800;
+  --fw-black:   900;   /* Smack wordmark, screen H1            */
+
+  /* ---------- Type: Line height ---------- */
+  --lh-tight:   1.0;
+  --lh-snug:    1.2;
+  --lh-normal:  1.4;
+  --lh-relaxed: 1.55;
+
+  /* ---------- Type: Tracking ---------- */
+  --tr-tight:   -1px;     /* Wordmark, screen H1 (paired w/ 900) */
+  --tr-snug:    -0.4px;
+  --tr-normal:  0;
+  --tr-wide:    0.5px;    /* Uppercased section labels          */
+
+  /* ---------- Spacing ---------- */
+  /* App is mobile — 4pt grid. */
+  --s-0:   0;
+  --s-1:   4px;
+  --s-2:   8px;
+  --s-3:   10px;
+  --s-4:   12px;
+  --s-5:   14px;
+  --s-6:   16px;   /* card padding default                   */
+  --s-7:   20px;   /* screen horizontal padding              */
+  --s-8:   24px;
+  --s-10:  32px;
+  --s-12:  48px;
+
+  /* ---------- Radii ---------- */
+  --r-xs:   6px;   /* badges                                 */
+  --r-sm:   8px;   /* small buttons, pills inner             */
+  --r-md:   10px;  /* type pickers, status options           */
+  --r-lg:   12px;  /* inputs, primary buttons                */
+  --r-xl:   14px;  /* event cards                            */
+  --r-2xl:  16px;  /* group cards                            */
+  --r-full: 999px; /* avatar, reaction pill, FAB             */
+
+  /* ---------- Borders ---------- */
+  --bw-hair: 1px;
+  --bd-faint:  1px solid var(--c-shore);
+  --bd-strong: 1px solid var(--c-shore-2);
+
+  /* ---------- Shadow / Glow ---------- */
+  /* Smack uses glow rather than drop shadow. The FAB has a
+     coloured shadow that bleeds, like a phosphorescent puddle. */
+  --sh-card:   0 1px 0 #ffffff05 inset, 0 4px 18px #00000040;
+  --sh-modal:  0 8px 40px #00000080, 0 0 0 1px #ffffff08 inset;
+  --sh-glow-cyan:   0 0 24px #2ee6d655, 0 0 6px #2ee6d6cc;
+  --sh-glow-amber:  0 0 24px #ffb54755, 0 0 6px #ffb547cc;
+  --sh-glow-live:   0 0 22px #3ff09a55, 0 0 5px #3ff09acc;
+  --sh-fab:    0 4px 8px #2ee6d680, 0 0 24px #2ee6d655;
+
+  /* ---------- Motion ---------- */
+  --ease-soft: cubic-bezier(0.25, 0.1, 0.25, 1);  /* default */
+  --ease-out:  cubic-bezier(0.16, 1, 0.3, 1);     /* arrivals (cards in) */
+  --ease-pulse: cubic-bezier(0.4, 0, 0.6, 1);     /* live-now pulse */
+  --d-fast:   120ms;
+  --d-base:   220ms;
+  --d-slow:   400ms;
+  --d-pulse:  1800ms;
+}
+
+/* =========================================================
+   Semantic element styles
+   Use these directly when writing throwaway design HTML.
+   ========================================================= */
+
+body {
+  font-family: var(--f-sans);
+  background: var(--c-deep-solid);
+  color: var(--c-fg);
+  font-size: var(--fs-body);
+  line-height: var(--lh-normal);
+  font-feature-settings: 'ss01', 'ss02';
+  -webkit-font-smoothing: antialiased;
+}
+
+.t-display {
+  font-family: var(--f-display);
+  font-size: var(--fs-display);
+  font-weight: var(--fw-black);
+  letter-spacing: var(--tr-tight);
+  line-height: var(--lh-tight);
+  color: var(--c-fg);
+}
+
+.t-h1 {
+  font-size: var(--fs-h1);
+  font-weight: var(--fw-black);
+  letter-spacing: var(--tr-tight);
+  line-height: var(--lh-snug);
+  color: var(--c-fg);
+}
+
+.t-h2 {
+  font-size: var(--fs-h2);
+  font-weight: var(--fw-black);
+  letter-spacing: var(--tr-snug);
+  line-height: var(--lh-snug);
+  color: var(--c-fg);
+}
+
+.t-h3 {
+  font-size: var(--fs-h3);
+  font-weight: var(--fw-heavy);
+  line-height: var(--lh-snug);
+  color: var(--c-fg);
+}
+
+.t-card-title {
+  font-size: var(--fs-card);
+  font-weight: var(--fw-bold);
+  color: var(--c-fg);
+}
+
+.t-body {
+  font-size: var(--fs-body);
+  font-weight: var(--fw-regular);
+  line-height: var(--lh-normal);
+  color: var(--c-fg);
+}
+
+.t-meta {
+  font-size: var(--fs-meta);
+  color: var(--c-fg-3);
+}
+
+.t-label {
+  font-size: var(--fs-label);
+  font-weight: var(--fw-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tr-wide);
+  color: var(--c-fg-3);
+}
+
+.t-micro {
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-semi);
+  color: var(--c-fg-4);
+}
+
+.t-mono {
+  font-family: var(--f-mono);
+  font-size: var(--fs-meta);
+}
+
+/* Live-now pulse — soft scale + glow oscillation */
+@keyframes smack-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.6; transform: scale(1.18); }
+}
+.smack-pulse-dot {
+  animation: smack-pulse var(--d-pulse) var(--ease-pulse) infinite;
+}
