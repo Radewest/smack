@@ -65,4 +65,20 @@ export default function AppNavigator() {
       <Stack.Screen name="JoinGroup" component={JoinGroupScreen} options={{ presentation: 'modal' }} />
       <Stack.Screen name="CreateEvent" component={CreateEventScreen} options={{ presentation: 'modal' }} />
       <Stack.Screen name="EventDetail" component={EventDetailScreen} />
-      <Stack.Screen name="FutureEvents" component={Fut
+      <Stack.Screen name="FutureEvents" component={FutureEventsScreen} />
+      <Stack.Screen name="PastEvents" component={PastEventsScreen} />
+      <Stack.Screen name="DiscoverEventDetail" component={DiscoverEventDetailScreen} />
+    </Stack.Navigator>
+  );
+}
+
+const styles = StyleSheet.create({
+  tabBar: {
+    backgroundColor: '#0d0d0d',
+    borderTopColor: '#1f1f1f',
+    borderTopWidth: 1,
+    height: 80,
+    paddingBottom: 12,
+    paddingTop: 6,
+  },
+});
