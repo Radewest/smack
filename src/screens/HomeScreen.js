@@ -1,413 +1,541 @@
 import { useEffect, useState, useRef } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet,
-  FlatList, RefreshControl, Animated, Linking,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet,
+  RefreshControl, Alert, Image, Animated,
 } from 'react-native';
-
-function openMaps(location) {
-  const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`;
-  Linking.openURL(url);
-}
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Swipeable } from 'react-native-gesture-handler';
 import { supabase } from '../lib/supabase';
+import { color, status as statusMap, fontSize, fontWeight, radius, space, shadow } from '../theme';
 
-const STATUS_LABELS = {
-  on_the_way: 'On the way 🚶',
-  live: 'Live now 🟢',
-  heading_home: 'Heading home 🌙',
-  ended: 'Ended',
-};
-const STATUS_COLORS = {
-  on_the_way: '#ff9f0a',
-  live: '#30d158',
-  heading_home: '#636366',
-  ended: '#3a3a3c',
-};
-const NEXT_STATUSES = {
-  on_the_way: ['live', 'heading_home', 'ended'],
-  live: ['heading_home', 'ended'],
-  heading_home: ['ended'],
-};
-
-// Attendance statuses for proper events (per-user)
-const ATTEND_STATUSES = [
-  { key: 'on_the_way', label: 'On the way 🚶', color: '#ff9f0a', bg: '#1f140a' },
-  { key: 'here', label: "I'm here 🟢", color: '#30d158', bg: '#0a1f0f' },
-  { key: 'heading_home', label: 'Heading home 🌙', color: '#636366', bg: '#1a1a1a' },
-];
-
-function isToday(dateStr) {
-  if (!dateStr) return false;
-  const d = new Date(dateStr);
-  const now = new Date();
-  return d.getFullYear() === now.getFullYear() &&
-    d.getMonth() === now.getMonth() &&
-    d.getDate() === now.getDate();
+// ─── Helpers ────────────────────────────────────────────────────
+function timeAgo(dateStr) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(dateStr).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' });
 }
 
+// ─── Pulsing ring ────────────────────────────────────────────────
+function PulsingRing({ ringColor }) {
+  const anim = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(anim, { toValue: 1.25, duration: 900, useNativeDriver: true }),
+        Animated.timing(anim, { toValue: 1, duration: 900, useNativeDriver: true }),
+      ])
+    ).start();
+  }, []);
+  return (
+    <Animated.View style={[
+      StyleSheet.absoluteFill, styles.pulsingRing,
+      {
+        borderColor: ringColor,
+        transform: [{ scale: anim }],
+        opacity: anim.interpolate({ inputRange: [1, 1.25], outputRange: [0.7, 0] }),
+      },
+    ]} />
+  );
+}
+
+// ─── Live bubble ────────────────────────────────────────────────
+function LiveBubble({ member, onPress }) {
+  const st = statusMap[member.live_status] || statusMap.ended;
+  const name = member.profiles?.display_name || member.profiles?.username || '?';
+  const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+
+  return (
+    <TouchableOpacity style={styles.bubble} onPress={() => onPress(member.id)} activeOpacity={0.8}>
+      <View style={[styles.bubbleRing, { borderColor: st.color }]}>
+        {member.live_status === 'live' && <PulsingRing ringColor={st.color} />}
+        {member.profiles?.avatar_url ? (
+          <Image source={{ uri: member.profiles.avatar_url }} style={styles.bubbleAvatar} />
+        ) : (
+          <View style={[styles.bubbleAvatar, styles.bubblePlaceholder]}>
+            <Text style={styles.bubbleInitials}>{initials}</Text>
+          </View>
+        )}
+      </View>
+      <Text style={styles.bubbleName} numberOfLines={1}>{name}</Text>
+      <Text style={[styles.bubbleStatus, { color: st.color }]}>
+        {member.live_status === 'live' ? 'Live' : member.live_status === 'on_the_way' ? 'OTW' : 'Home'}
+      </Text>
+      <Text style={styles.bubbleGroup} numberOfLines={1}>
+        {member.groups?.emoji} {member.groups?.name}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
+// ─── Upcoming card ───────────────────────────────────────────────
+function UpcomingCard({ event, onPress }) {
+  const going = (event.rsvps || []).filter(r => r.status === 'going').length;
+  const dateStr = new Date(event.starts_at).toLocaleDateString('en-ZA', {
+    weekday: 'short', day: 'numeric', month: 'short',
+  });
+  const timeStr = new Date(event.starts_at).toLocaleTimeString('en-ZA', {
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  });
+
+  return (
+    <TouchableOpacity style={styles.upcomingCard} onPress={() => onPress(event.id)} activeOpacity={0.75}>
+      <View style={styles.upcomingLeft}>
+        <Text style={styles.upcomingGroup}>{event.groups?.emoji} {event.groups?.name}</Text>
+        <Text style={styles.upcomingTitle} numberOfLines={1}>{event.title}</Text>
+        {event.location ? (
+          <Text style={styles.upcomingMeta} numberOfLines={1}>📍 {event.location}</Text>
+        ) : null}
+        <Text style={styles.upcomingMeta}>🕐 {dateStr} · {timeStr}</Text>
+      </View>
+      {going > 0 && (
+        <View style={styles.upcomingRsvp}>
+          <Text style={styles.upcomingRsvpCount}>{going}</Text>
+          <Text style={styles.upcomingRsvpLabel}>keen</Text>
+        </View>
+      )}
+      <Ionicons name="chevron-forward" size={14} color={color.fg4} style={{ marginLeft: 4 }} />
+    </TouchableOpacity>
+  );
+}
+
+// ─── Activity row ────────────────────────────────────────────────
+function ActivityRow({ item, currentUserId, onPress }) {
+  const isOwn = item.createdBy === currentUserId;
+  const actorName = isOwn ? 'You' : (item.actor?.display_name || item.actor?.username || 'Someone');
+  const groupLabel = item.group ? `${item.group.emoji || ''} ${item.group.name}`.trim() : '';
+
+  let icon = '📅';
+  let text = '';
+
+  if (item.kind === 'new_event') {
+    if (item.eventType === 'live') {
+      icon = '⚡';
+      text = `${actorName} ${isOwn ? 'are' : 'is'} out tonight`;
+    } else {
+      icon = '📅';
+      text = `${actorName} posted ${item.title}`;
+    }
+  } else if (item.kind === 'rsvp') {
+    if (item.status === 'going') {
+      icon = '🙋'; text = `${actorName} ${isOwn ? 'are' : 'is'} keen for ${item.title}`;
+    } else if (item.status === 'maybe') {
+      icon = '🤔'; text = `${actorName} might make ${item.title}`;
+    } else {
+      icon = '🙅'; text = `${actorName} can't make ${item.title}`;
+    }
+  }
+
+  return (
+    <TouchableOpacity style={styles.activityRow} onPress={() => onPress(item.eventId)} activeOpacity={0.7}>
+      <Text style={styles.activityIcon}>{icon}</Text>
+      <View style={styles.activityBody}>
+        <Text style={styles.activityText} numberOfLines={2}>{text}</Text>
+        <View style={styles.activityMeta}>
+          {groupLabel ? <Text style={styles.activityGroup}>{groupLabel}</Text> : null}
+          <Text style={styles.activityTime}>{timeAgo(item.time)}</Text>
+        </View>
+      </View>
+      <Ionicons name="chevron-forward" size={13} color={color.fg4} />
+    </TouchableOpacity>
+  );
+}
+
+// ─── Section header ──────────────────────────────────────────────
+function SectionHeader({ title, live }) {
+  return (
+    <View style={styles.sectionHeader}>
+      {live && <View style={styles.liveDot} />}
+      <Text style={styles.sectionTitle}>{title}</Text>
+    </View>
+  );
+}
+
+// ─── Main screen ─────────────────────────────────────────────────
 export default function HomeScreen({ navigation }) {
-  const [events, setEvents] = useState([]);
-  const [endedEvents, setEndedEvents] = useState([]);
-  const [futureCount, setFutureCount] = useState(0);
-  const [pastCount, setPastCount] = useState(0);
-  const [dismissedIds, setDismissedIds] = useState(new Set());
   const [userId, setUserId] = useState(null);
+  const [myGroups, setMyGroups] = useState([]);
+  const [liveMembers, setLiveMembers] = useState([]);
+  const [upcomingEvents, setUpcomingEvents] = useState([]);
+  const [activityFeed, setActivityFeed] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
-  const swipeableRefs = useRef({});
+
+  const userIdRef = useRef(null);
+  const groupIdsRef = useRef([]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
+      userIdRef.current = user?.id;
       setUserId(user?.id);
-      fetchDismissals(user?.id);
+      if (user?.id) loadAll(user.id);
     });
-    fetchEvents();
 
     const channel = supabase
-      .channel('events_feed')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, fetchEvents)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'rsvps' }, fetchEvents)
+      .channel('home_global')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => {
+        if (!groupIdsRef.current.length) return;
+        fetchLiveMembers(groupIdsRef.current);
+        fetchUpcoming(groupIdsRef.current);
+        fetchActivity(groupIdsRef.current, userIdRef.current);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'rsvps' }, () => {
+        if (!groupIdsRef.current.length) return;
+        fetchActivity(groupIdsRef.current, userIdRef.current);
+      })
       .subscribe();
 
     return () => supabase.removeChannel(channel);
   }, []);
 
-  async function fetchDismissals(uid) {
-    if (!uid) return;
-    const { data } = await supabase.from('event_dismissals').select('event_id').eq('user_id', uid);
-    if (data) {
-      const ids = new Set(data.map(d => d.event_id));
-      setDismissedIds(ids);
-      setPastCount(ids.size);
-    }
-  }
+  async function loadAll(uid) {
+    const { data: groups } = await supabase.rpc('get_my_groups');
+    if (!groups?.length) { setRefreshing(false); return; }
+    setMyGroups(groups);
+    const groupIds = groups.map(g => g.id);
+    groupIdsRef.current = groupIds;
 
-  async function handleDismiss(eventId) {
-    if (!userId) return;
-    swipeableRefs.current[eventId]?.close();
-    await supabase.from('event_dismissals').upsert({ event_id: eventId, user_id: userId }, { onConflict: 'event_id,user_id', ignoreDuplicates: true });
-    setDismissedIds(prev => new Set([...prev, eventId]));
-    setPastCount(prev => prev + 1);
-    setEndedEvents(prev => prev.filter(e => e.id !== eventId));
-  }
-
-  async function fetchEvents() {
-    const { data } = await supabase
-      .from('events')
-      .select('*, profiles!events_created_by_fkey(display_name, username), rsvps(user_id, status, attendance_status, profiles!rsvps_user_id_fkey(display_name, username))')
-      .order('created_at', { ascending: false });
-
-    if (data) {
-      const now = new Date();
-      const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-
-      const todayActive = data.filter(e =>
-        (e.type === 'live' && e.live_status !== 'ended') ||
-        (e.type === 'proper' && isToday(e.starts_at) && new Date(e.starts_at) >= now)
-      ).sort((a, b) => {
-        if (a.type === 'live' && b.type !== 'live') return -1;
-        if (a.type !== 'live' && b.type === 'live') return 1;
-        if (a.starts_at && b.starts_at) return new Date(a.starts_at) - new Date(b.starts_at);
-        return new Date(b.created_at) - new Date(a.created_at);
-      });
-
-      const todayEnded = data.filter(e =>
-        (e.type === 'live' && e.live_status === 'ended' && isToday(e.created_at)) ||
-        (e.type === 'proper' && isToday(e.starts_at) && new Date(e.starts_at) < now)
-      ).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-
-      const future = data.filter(e =>
-        e.type === 'proper' && e.starts_at && new Date(e.starts_at) > todayEnd
-      );
-
-      setEvents(todayActive);
-      setEndedEvents(todayEnded);
-      setFutureCount(future.length);
-    }
+    await Promise.all([
+      fetchLiveMembers(groupIds),
+      fetchUpcoming(groupIds),
+      fetchActivity(groupIds, uid),
+    ]);
     setRefreshing(false);
   }
 
-  async function updateStatus(eventId, status) {
-    await supabase.from('events').update({ live_status: status }).eq('id', eventId);
+  async function fetchLiveMembers(groupIds) {
+    const { data } = await supabase
+      .from('events')
+      .select('id, live_status, group_id, profiles!events_created_by_fkey(id, display_name, username, avatar_url), groups(name, emoji)')
+      .eq('type', 'live')
+      .in('live_status', ['live', 'on_the_way', 'heading_home'])
+      .in('group_id', groupIds);
+    setLiveMembers(data || []);
   }
 
-  async function updateAttendanceStatus(eventId, uid, status) {
-    if (!uid) return;
-    await supabase.from('rsvps').upsert(
-      { event_id: eventId, user_id: uid, status: 'going', attendance_status: status, updated_at: new Date().toISOString() },
-      { onConflict: 'event_id,user_id' }
-    );
-    fetchEvents();
+  async function fetchUpcoming(groupIds) {
+    const { data } = await supabase
+      .from('events')
+      .select('id, title, starts_at, location, group_id, groups(name, emoji), rsvps(user_id, status)')
+      .eq('type', 'proper')
+      .gt('starts_at', new Date().toISOString())
+      .in('group_id', groupIds)
+      .order('starts_at')
+      .limit(8);
+    setUpcomingEvents(data || []);
   }
 
-  function renderRightActions() {
-    return (
-      <View style={styles.dismissAction}>
-        <Ionicons name="archive" size={22} color="#fff" />
-        <Text style={styles.dismissText}>Archive</Text>
-      </View>
-    );
+  async function fetchActivity(groupIds, uid) {
+    const { data: eventsData } = await supabase
+      .from('events')
+      .select('id, title, type, created_at, created_by, group_id, groups(name, emoji), profiles!events_created_by_fkey(display_name, username)')
+      .in('group_id', groupIds)
+      .order('created_at', { ascending: false })
+      .limit(15);
+
+    const events = eventsData || [];
+    let rsvps = [];
+
+    if (events.length > 0) {
+      let q = supabase
+        .from('rsvps')
+        .select('id, event_id, user_id, status, updated_at, profiles!rsvps_user_id_fkey(display_name, username)')
+        .in('event_id', events.map(e => e.id))
+        .order('updated_at', { ascending: false })
+        .limit(20);
+      if (uid) q = q.neq('user_id', uid);
+      const { data: rsvpData } = await q;
+      rsvps = rsvpData || [];
+    }
+
+    const items = [];
+
+    events.forEach(e => {
+      items.push({
+        id: `event_${e.id}`,
+        kind: 'new_event',
+        time: e.created_at,
+        eventId: e.id,
+        title: e.title,
+        group: e.groups,
+        actor: e.profiles,
+        createdBy: e.created_by,
+        eventType: e.type,
+      });
+    });
+
+    rsvps.forEach(r => {
+      const event = events.find(e => e.id === r.event_id);
+      if (!event) return;
+      items.push({
+        id: `rsvp_${r.id}`,
+        kind: 'rsvp',
+        time: r.updated_at,
+        eventId: r.event_id,
+        title: event.title,
+        group: event.groups,
+        actor: r.profiles,
+        createdBy: r.user_id,
+        status: r.status,
+      });
+    });
+
+    items.sort((a, b) => new Date(b.time) - new Date(a.time));
+    setActivityFeed(items.slice(0, 18));
   }
 
-  function renderEvent({ item }) {
-    if (item._isFutureCard) {
-      return (
-        <TouchableOpacity style={styles.linkCard} onPress={() => navigation.navigate('FutureEvents')} activeOpacity={0.8}>
-          <View style={styles.linkCardLeft}>
-            <Text style={styles.linkCardTitle}>Upcoming Smacks</Text>
-            <Text style={styles.linkCardSub}>{item.count} event{item.count !== 1 ? 's' : ''} planned</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#555" />
-        </TouchableOpacity>
-      );
+  // ── Quick actions ─────────────────────────────────────────────
+  function pickGroup(onPick) {
+    if (!myGroups.length) {
+      Alert.alert('No groups', 'Join or create a group first.');
+      return;
     }
-
-    if (item._isPastCard) {
-      return (
-        <TouchableOpacity style={styles.linkCard} onPress={() => navigation.navigate('PastEvents')} activeOpacity={0.8}>
-          <View style={styles.linkCardLeft}>
-            <Text style={styles.linkCardTitle}>Past Events</Text>
-            <Text style={styles.linkCardSub}>{item.count} archived</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#555" />
-        </TouchableOpacity>
-      );
-    }
-
-    if (item._isSectionHeader) {
-      return <Text style={styles.sectionDivider}>{item.label}</Text>;
-    }
-
-    const isOwner = item.created_by === userId;
-    const isLive = item.type === 'live';
-    const isProper = item.type === 'proper';
-    const isHomeSafe = item.title === '🏠 Home Safe';
-    const userName = item.profiles?.display_name || item.profiles?.username || 'Someone';
-    const nextStatuses = isOwner && isLive ? (NEXT_STATUSES[item.live_status] || []) : [];
-    const rsvps = item.rsvps || [];
-    const going = rsvps.filter(r => r.status === 'going');
-    const maybe = rsvps.filter(r => r.status === 'maybe');
-    const myRsvp = rsvps.find(r => r.user_id === userId);
-    const goingNames = going.map(r => r.profiles?.display_name || r.profiles?.username || 'Someone');
-
-    // Who's already at the event (has attendance_status = 'here')
-    const hereNames = going
-      .filter(r => r.attendance_status === 'here')
-      .map(r => r.profiles?.display_name || r.profiles?.username || 'Someone');
-
-    const card = (
-      <TouchableOpacity
-        style={[styles.card, isHomeSafe && styles.homeSafeCard, item._ended && styles.cardEnded]}
-        onPress={() => navigation.navigate('EventDetail', { eventId: item.id })}
-        activeOpacity={0.75}
-      >
-        <View style={styles.cardTop}>
-          <View style={styles.titleRow}>
-            {isLive && item.live_status !== 'ended' && (
-              <View style={[styles.dot, { backgroundColor: STATUS_COLORS[item.live_status] }]} />
-            )}
-            <Text style={styles.cardTitle}>{item.title}</Text>
-          </View>
-          {!isHomeSafe && (
-            <View style={[styles.badge, isLive ? styles.liveBadge : styles.properBadge]}>
-              <Text style={styles.badgeText}>{isLive ? '⚡ Live' : '📅 Today'}</Text>
-            </View>
-          )}
-        </View>
-
-        {item.location ? (
-          <TouchableOpacity onPress={() => openMaps(item.location)} activeOpacity={0.7} style={styles.locationRow}>
-            <Text style={styles.meta}>📍 <Text style={styles.locationLink}>{item.location}</Text></Text>
-            <Ionicons name="chevron-forward" size={12} color="#555" />
-          </TouchableOpacity>
-        ) : null}
-        {item.starts_at && !isLive && (
-          <Text style={styles.meta}>
-            🕐 {new Date(item.starts_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </Text>
-        )}
-        {isLive && item.live_status && (
-          <Text style={[styles.statusText, { color: STATUS_COLORS[item.live_status] }]}>
-            {STATUS_LABELS[item.live_status]}
-          </Text>
-        )}
-
-        {!isHomeSafe && (going.length > 0 || maybe.length > 0 || myRsvp) && (
-          <View style={styles.rsvpSummary}>
-            {hereNames.length > 0 && (
-              <Text style={[styles.rsvpText, { color: '#30d158' }]}>
-                🟢 {hereNames.slice(0, 2).join(', ')}{hereNames.length > 2 ? ` +${hereNames.length - 2}` : ''} here
-              </Text>
-            )}
-            {going.length > 0 && hereNames.length === 0 && (
-              <Text style={styles.rsvpText}>
-                🙋 {goingNames.slice(0, 2).join(', ')}{going.length > 2 ? ` +${going.length - 2}` : ''}
-              </Text>
-            )}
-            {maybe.length > 0 && <Text style={styles.rsvpText}>🤔 {maybe.length} maybe</Text>}
-            {myRsvp && (
-              <View style={styles.myRsvpBadge}>
-                <Text style={styles.myRsvpText}>
-                  {myRsvp.status === 'going' ? "You're keen" : myRsvp.status === 'maybe' ? 'You: maybe' : "You can't go"}
-                </Text>
-              </View>
-            )}
-          </View>
-        )}
-
-        <Text style={styles.author}>{isOwner ? 'You' : userName}</Text>
-
-        {/* Live event status buttons (owner only) */}
-        {nextStatuses.length > 0 && (
-          <View style={styles.statusBtns}>
-            {nextStatuses.map(s => (
-              <TouchableOpacity key={s} style={styles.statusBtn} onPress={() => updateStatus(item.id, s)}>
-                <Text style={styles.statusBtnText}>{STATUS_LABELS[s]}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-
-        {/* Proper event attendance status (anyone who RSVPed going/maybe) */}
-        {isProper && !item._ended && myRsvp && myRsvp.status !== 'not_going' && (
-          <View style={styles.attendBtns}>
-            {ATTEND_STATUSES.map(s => {
-              const isActive = myRsvp.attendance_status === s.key;
-              return (
-                <TouchableOpacity
-                  key={s.key}
-                  style={[styles.attendBtn, isActive && { borderColor: s.color, backgroundColor: s.bg }]}
-                  onPress={(e) => {
-                    e.stopPropagation?.();
-                    updateAttendanceStatus(item.id, userId, isActive ? null : s.key);
-                  }}
-                >
-                  <Text style={[styles.attendBtnText, isActive && { color: s.color }]}>{s.label}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        )}
-      </TouchableOpacity>
-    );
-
-    if (item._ended) {
-      return (
-        <Swipeable
-          ref={ref => { swipeableRefs.current[item.id] = ref; }}
-          renderRightActions={renderRightActions}
-          onSwipeableOpen={dir => { if (dir === 'right') handleDismiss(item.id); }}
-          rightThreshold={60}
-        >
-          {card}
-        </Swipeable>
-      );
-    }
-
-    return card;
+    if (myGroups.length === 1) { onPick(myGroups[0]); return; }
+    const options = myGroups.map(g => ({
+      text: `${g.emoji || '👥'} ${g.name}`,
+      onPress: () => onPick(g),
+    }));
+    options.push({ text: 'Cancel', style: 'cancel' });
+    Alert.alert('Which group?', '', options);
   }
 
-  const today = new Date().toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' });
-  const visibleEnded = endedEvents.filter(e => !dismissedIds.has(e.id)).map(e => ({ ...e, _ended: true }));
+  function handleFreeTonightPress() {
+    pickGroup(g => navigation.navigate('CreateEvent', { groupId: g.id, defaultType: 'live' }));
+  }
 
-  const listData = [
-    ...events,
-    ...(visibleEnded.length > 0 ? [{ _isSectionHeader: true, id: '_endedHeader', label: 'Ended' }, ...visibleEnded] : []),
-    ...(futureCount > 0 ? [{ _isFutureCard: true, id: '_future', count: futureCount }] : []),
-    ...(pastCount > 0 ? [{ _isPastCard: true, id: '_past', count: pastCount }] : []),
-  ];
+  function handleHomeSafePress() {
+    pickGroup(async g => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { error } = await supabase.from('events').insert({
+        group_id: g.id,
+        created_by: user.id,
+        title: '🏠 Home Safe',
+        type: 'live',
+        live_status: 'live',
+      });
+      if (!error) Alert.alert('Posted 🏠', `${g.name} knows you're home safe.`);
+    });
+  }
+
+  const hasActivity = liveMembers.length > 0 || upcomingEvents.length > 0 || activityFeed.length > 0;
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.logo}>Smack</Text>
-        <Text style={styles.date}>{today}</Text>
+        <Text style={styles.wordmark}>Smack</Text>
+        <TouchableOpacity style={styles.groupsBtn} onPress={() => navigation.navigate('Groups')} activeOpacity={0.7}>
+          <Ionicons name="people" size={15} color={color.glowCyan} />
+          <Text style={styles.groupsBtnText}>Groups</Text>
+        </TouchableOpacity>
       </View>
-      <FlatList
-        data={listData}
-        keyExtractor={item => item.id}
-        contentContainerStyle={styles.list}
+
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scroll}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchEvents(); }} tintColor="#fff" />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => { setRefreshing(true); if (userId) loadAll(userId); }}
+            tintColor={color.fg}
+          />
         }
-        renderItem={renderEvent}
-        ListHeaderComponent={
-          <Text style={styles.sectionLabel}>Today</Text>
-        }
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={styles.emptyText}>Nothing on today.</Text>
-            <Text style={styles.emptySubText}>Tap + to create a smack.</Text>
+      >
+        {/* No groups */}
+        {!refreshing && myGroups.length === 0 && (
+          <View style={styles.welcome}>
+            <Text style={styles.welcomeEmoji}>👊</Text>
+            <Text style={styles.welcomeTitle}>Welcome to Smack</Text>
+            <Text style={styles.welcomeSub}>Get your crew together. Join a group or start one.</Text>
+            <TouchableOpacity style={styles.welcomeBtn} onPress={() => navigation.navigate('CreateGroup')} activeOpacity={0.85}>
+              <Text style={styles.welcomeBtnText}>Create a group</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.welcomeBtnOutline} onPress={() => navigation.navigate('JoinGroup')} activeOpacity={0.85}>
+              <Text style={styles.welcomeBtnOutlineText}>Join with a code</Text>
+            </TouchableOpacity>
           </View>
-        }
-      />
+        )}
+
+        {myGroups.length > 0 && (
+          <>
+            {/* Quick actions */}
+            <View style={styles.quickRow}>
+              <TouchableOpacity style={styles.quickBtn} onPress={handleFreeTonightPress} activeOpacity={0.8}>
+                <Text style={styles.quickEmoji}>🎉</Text>
+                <Text style={styles.quickLabel}>Free tonight</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.quickBtn, styles.quickBtnHome]} onPress={handleHomeSafePress} activeOpacity={0.8}>
+                <Text style={styles.quickEmoji}>🏠</Text>
+                <Text style={styles.quickLabel}>Home Safe</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Live strip */}
+            {liveMembers.length > 0 && (
+              <View style={styles.section}>
+                <SectionHeader title="Live now" live />
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.bubblesScroll}>
+                  {liveMembers.map(m => (
+                    <LiveBubble key={m.id} member={m} onPress={id => navigation.navigate('EventDetail', { eventId: id })} />
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+
+            {/* Upcoming */}
+            {upcomingEvents.length > 0 && (
+              <View style={styles.section}>
+                <SectionHeader title="Upcoming" />
+                {upcomingEvents.map(e => (
+                  <UpcomingCard key={e.id} event={e} onPress={id => navigation.navigate('EventDetail', { eventId: id })} />
+                ))}
+              </View>
+            )}
+
+            {/* Recent activity */}
+            {activityFeed.length > 0 && (
+              <View style={styles.section}>
+                <SectionHeader title="Recent" />
+                <View style={styles.activityList}>
+                  {activityFeed.map(item => (
+                    <ActivityRow
+                      key={item.id}
+                      item={item}
+                      currentUserId={userId}
+                      onPress={id => navigation.navigate('EventDetail', { eventId: id })}
+                    />
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {/* All quiet */}
+            {!hasActivity && !refreshing && (
+              <View style={styles.quiet}>
+                <Text style={styles.quietEmoji}>🌙</Text>
+                <Text style={styles.quietTitle}>All quiet</Text>
+                <Text style={styles.quietSub}>Nothing happening right now across your groups.</Text>
+              </View>
+            )}
+          </>
+        )}
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0d0d0d' },
-  header: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 4 },
-  logo: { fontSize: 28, fontWeight: '900', color: '#fff', letterSpacing: -1 },
-  date: { color: '#555', fontSize: 13, marginTop: 2, marginBottom: 8 },
-  sectionLabel: {
-    color: '#555', fontSize: 12, fontWeight: '600',
-    textTransform: 'uppercase', letterSpacing: 0.5,
-    paddingHorizontal: 16, paddingBottom: 10,
-  },
-  list: { paddingBottom: 100 },
-  card: {
-    backgroundColor: '#1a1a1a', borderRadius: 14, padding: 16,
-    marginHorizontal: 16, marginBottom: 10, borderWidth: 1, borderColor: '#2a2a2a',
-  },
-  homeSafeCard: { borderColor: '#1a3a2a', backgroundColor: '#0f1f17' },
-  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
-  titleRow: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  dot: { width: 8, height: 8, borderRadius: 4, marginRight: 8 },
-  cardTitle: { color: '#fff', fontSize: 16, fontWeight: '700', flex: 1 },
-  badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  liveBadge: { backgroundColor: '#1a2a0a' },
-  properBadge: { backgroundColor: '#0a1a2a' },
-  badgeText: { fontSize: 11, fontWeight: '600', color: '#aaa' },
-  meta: { color: '#888', fontSize: 13, marginBottom: 3 },
-  locationRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 3 },
-  locationLink: { textDecorationLine: 'underline', color: '#aaa' },
-  statusText: { fontSize: 13, fontWeight: '600', marginTop: 2 },
-  rsvpSummary: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
-  rsvpText: { color: '#888', fontSize: 12 },
-  myRsvpBadge: { backgroundColor: '#2a1a00', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 },
-  myRsvpText: { color: '#ff9f0a', fontSize: 12, fontWeight: '600' },
-  author: { color: '#444', fontSize: 11, marginTop: 8 },
-  statusBtns: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 },
-  statusBtn: { backgroundColor: '#2a2a2a', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
-  statusBtnText: { color: '#ccc', fontSize: 12, fontWeight: '600' },
-  attendBtns: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 },
-  attendBtn: {
-    borderWidth: 1, borderColor: '#2a2a2a', borderRadius: 8,
-    paddingHorizontal: 10, paddingVertical: 6,
-  },
-  attendBtnText: { color: '#888', fontSize: 12, fontWeight: '600' },
-  cardEnded: { opacity: 0.5 },
-  sectionDivider: {
-    color: '#444', fontSize: 11, fontWeight: '700', textTransform: 'uppercase',
-    letterSpacing: 0.5, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 6,
-  },
-  dismissAction: {
-    backgroundColor: '#3a3a3c', justifyContent: 'center', alignItems: 'center',
-    width: 80, borderRadius: 14, marginLeft: 8, marginBottom: 10, gap: 4,
-  },
-  dismissText: { color: '#fff', fontSize: 11, fontWeight: '600' },
-  linkCard: {
+  container: { flex: 1, backgroundColor: color.deep },
+
+  header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: '#1a1a1a', borderRadius: 14, padding: 16,
-    marginHorizontal: 16, marginBottom: 10, borderWidth: 1, borderColor: '#2a2a2a',
-    marginTop: 6,
+    paddingHorizontal: space[7], paddingTop: space[2], paddingBottom: space[4],
   },
-  linkCardLeft: { gap: 2 },
-  linkCardTitle: { color: '#fff', fontSize: 15, fontWeight: '700' },
-  linkCardSub: { color: '#555', fontSize: 13 },
-  empty: { alignItems: 'center', marginTop: 60 },
-  emptyText: { color: '#fff', fontSize: 16, fontWeight: '600', marginBottom: 6 },
-  emptySubText: { color: '#555', fontSize: 14 },
+  wordmark: { fontSize: fontSize.h1, fontWeight: fontWeight.black, color: color.fg, letterSpacing: -1 },
+  groupsBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 12, paddingVertical: 7,
+    borderRadius: radius.full, borderWidth: 1, borderColor: color.shore,
+    backgroundColor: color.ink,
+  },
+  groupsBtnText: { color: color.glowCyan, fontSize: fontSize.meta, fontWeight: fontWeight.semi },
+
+  scroll: { paddingBottom: 40 },
+
+  // Welcome
+  welcome: { alignItems: 'center', paddingHorizontal: 40, paddingTop: 60, gap: space[3] },
+  welcomeEmoji: { fontSize: 56, marginBottom: space[2] },
+  welcomeTitle: { color: color.fg, fontSize: 22, fontWeight: fontWeight.heavy, textAlign: 'center' },
+  welcomeSub: { color: color.fg4, fontSize: fontSize.meta, textAlign: 'center', lineHeight: 20, marginBottom: space[4] },
+  welcomeBtn: {
+    backgroundColor: color.glowCyan, borderRadius: radius.lg,
+    paddingVertical: 14, width: '100%', alignItems: 'center',
+  },
+  welcomeBtnText: { color: color.deep, fontSize: fontSize.body, fontWeight: fontWeight.bold },
+  welcomeBtnOutline: {
+    borderWidth: 1, borderColor: color.shore, borderRadius: radius.lg,
+    paddingVertical: 14, width: '100%', alignItems: 'center',
+  },
+  welcomeBtnOutlineText: { color: color.fg3, fontSize: fontSize.body },
+
+  // Quick actions
+  quickRow: { flexDirection: 'row', gap: space[3], paddingHorizontal: space[6], paddingBottom: space[2] },
+  quickBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    paddingVertical: 14, borderRadius: radius.lg,
+    backgroundColor: color.ink2, borderWidth: 1, borderColor: color.shore,
+  },
+  quickBtnHome: { backgroundColor: color.statusLiveBg, borderColor: color.statusLiveBorder },
+  quickEmoji: { fontSize: 18 },
+  quickLabel: { color: color.fg, fontSize: fontSize.meta, fontWeight: fontWeight.bold },
+
+  // Section
+  section: { paddingTop: space[6], paddingBottom: space[2] },
+  sectionHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: space[6], marginBottom: space[4],
+  },
+  sectionTitle: {
+    color: color.fg3, fontSize: fontSize.label, fontWeight: fontWeight.semi,
+    textTransform: 'uppercase', letterSpacing: 0.5,
+  },
+  liveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: color.statusLive },
+
+  // Live bubbles
+  bubblesScroll: { paddingHorizontal: space[6], gap: space[5] },
+  bubble: { alignItems: 'center', width: 66 },
+  bubbleRing: {
+    width: 54, height: 54, borderRadius: 27, borderWidth: 2,
+    alignItems: 'center', justifyContent: 'center', position: 'relative',
+  },
+  pulsingRing: { borderRadius: 27, borderWidth: 2 },
+  bubbleAvatar: { width: 46, height: 46, borderRadius: 23 },
+  bubblePlaceholder: { backgroundColor: color.ink2, alignItems: 'center', justifyContent: 'center' },
+  bubbleInitials: { color: color.fg, fontSize: 15, fontWeight: fontWeight.bold },
+  bubbleName: { color: color.fg2, fontSize: 10, fontWeight: fontWeight.semi, marginTop: 5, textAlign: 'center' },
+  bubbleStatus: { fontSize: 9, fontWeight: fontWeight.bold, marginTop: 1 },
+  bubbleGroup: { color: color.fg4, fontSize: 9, marginTop: 1, textAlign: 'center' },
+
+  // Upcoming
+  upcomingCard: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: color.ink, borderRadius: radius.xl, padding: space[5],
+    marginHorizontal: space[6], marginBottom: space[2],
+    borderWidth: 1, borderColor: color.shore, ...shadow.card,
+  },
+  upcomingLeft: { flex: 1 },
+  upcomingGroup: { color: color.fg4, fontSize: fontSize.micro, fontWeight: fontWeight.semi, marginBottom: 4 },
+  upcomingTitle: { color: color.fg, fontSize: fontSize.body, fontWeight: fontWeight.bold, marginBottom: 4 },
+  upcomingMeta: { color: color.fg3, fontSize: fontSize.meta, marginTop: 1 },
+  upcomingRsvp: { alignItems: 'center', marginHorizontal: space[4] },
+  upcomingRsvpCount: { color: color.glowCyan, fontSize: 18, fontWeight: fontWeight.black },
+  upcomingRsvpLabel: { color: color.fg4, fontSize: fontSize.micro, marginTop: 1 },
+
+  // Activity
+  activityList: {
+    marginHorizontal: space[6],
+    backgroundColor: color.ink, borderRadius: radius.xl,
+    borderWidth: 1, borderColor: color.shore, overflow: 'hidden',
+  },
+  activityRow: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: space[5], paddingVertical: space[5],
+    borderBottomWidth: 1, borderBottomColor: color.shore,
+  },
+  activityIcon: { fontSize: 18, marginRight: space[4], width: 26, textAlign: 'center' },
+  activityBody: { flex: 1 },
+  activityText: { color: color.fg, fontSize: fontSize.meta, lineHeight: 19 },
+  activityMeta: { flexDirection: 'row', alignItems: 'center', gap: space[3], marginTop: 3 },
+  activityGroup: { color: color.fg4, fontSize: fontSize.micro, fontWeight: fontWeight.semi },
+  activityTime: { color: color.fg4, fontSize: fontSize.micro },
+
+  // All quiet
+  quiet: { alignItems: 'center', paddingTop: 60, paddingHorizontal: 40 },
+  quietEmoji: { fontSize: 40, marginBottom: space[4] },
+  quietTitle: { color: color.fg, fontSize: 18, fontWeight: fontWeight.heavy, marginBottom: space[2] },
+  quietSub: { color: color.fg4, fontSize: fontSize.meta, textAlign: 'center', lineHeight: 20 },
 });

@@ -2,6 +2,8 @@ import { StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { color } from '../theme';
+import HomeScreen from '../screens/HomeScreen';
 import GroupsScreen from '../screens/GroupsScreen';
 import GroupDetailScreen from '../screens/GroupDetailScreen';
 import GroupMembersScreen from '../screens/GroupMembersScreen';
@@ -25,15 +27,15 @@ function Tabs() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: styles.tabBar,
-        tabBarActiveTintColor: '#2ee6d6',
-        tabBarInactiveTintColor: '#555',
+        tabBarActiveTintColor: color.glowCyan,
+        tabBarInactiveTintColor: color.fg4,
         tabBarShowLabel: true,
         tabBarLabelStyle: { fontSize: 11, marginBottom: 4 },
       }}
     >
       <Tab.Screen
         name="Home"
-        component={GroupsScreen}
+        component={HomeScreen}
         options={{ tabBarIcon: ({ color }) => <Ionicons name="home" size={22} color={color} /> }}
       />
       <Tab.Screen
@@ -59,6 +61,8 @@ export default function AppNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Tabs" component={Tabs} />
+      {/* Groups list — accessed via the "Groups" button on HomeScreen */}
+      <Stack.Screen name="Groups" component={GroupsScreen} />
       <Stack.Screen name="GroupDetail" component={GroupDetailScreen} />
       <Stack.Screen name="GroupMembers" component={GroupMembersScreen} />
       <Stack.Screen name="CreateGroup" component={CreateGroupScreen} options={{ presentation: 'modal' }} />
@@ -74,8 +78,8 @@ export default function AppNavigator() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: '#0d0d0d',
-    borderTopColor: '#1f1f1f',
+    backgroundColor: color.ink,
+    borderTopColor: color.shore,
     borderTopWidth: 1,
     height: 80,
     paddingBottom: 12,

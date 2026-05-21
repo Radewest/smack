@@ -6,10 +6,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { supabase } from '../lib/supabase';
+import { color, fontSize, fontWeight, radius, space } from '../theme';
 
 export default function CreateEventScreen({ route, navigation }) {
   const groupId = route.params?.groupId;
-  const [type, setType] = useState('proper');
+  const [type, setType] = useState(route.params?.defaultType || 'proper');
   const [title, setTitle] = useState('');
   const [location, setLocation] = useState('');
   const [description, setDescription] = useState('');
@@ -94,7 +95,7 @@ export default function CreateEventScreen({ route, navigation }) {
         <TextInput
           style={styles.input}
           placeholder={type === 'live' ? "I'm at… (e.g. The Crown, Shoreditch)" : "What's the smack?"}
-          placeholderTextColor="#555"
+          placeholderTextColor={color.fg4}
           value={title}
           onChangeText={setTitle}
           autoFocus
@@ -103,7 +104,7 @@ export default function CreateEventScreen({ route, navigation }) {
         <TextInput
           style={styles.input}
           placeholder="Location (optional)"
-          placeholderTextColor="#555"
+          placeholderTextColor={color.fg4}
           value={location}
           onChangeText={setLocation}
         />
@@ -125,7 +126,7 @@ export default function CreateEventScreen({ route, navigation }) {
             <TextInput
               style={[styles.input, styles.textArea]}
               placeholder="Description (optional)"
-              placeholderTextColor="#555"
+              placeholderTextColor={color.fg4}
               value={description}
               onChangeText={setDescription}
               multiline
@@ -179,64 +180,52 @@ export default function CreateEventScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0d0d0d' },
+  container: { flex: 1, backgroundColor: color.deep },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
+    paddingHorizontal: space[7],
+    paddingVertical: space[5],
     borderBottomWidth: 1,
-    borderBottomColor: '#1f1f1f',
+    borderBottomColor: color.shore,
   },
-  heading: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  cancel: { color: '#888', fontSize: 16 },
-  done: { color: '#2ee6d6', fontSize: 16, fontWeight: '700' },
+  heading: { color: color.fg, fontSize: fontSize.body, fontWeight: fontWeight.bold },
+  cancel: { color: color.fg3, fontSize: fontSize.body },
+  done: { color: color.glowCyan, fontSize: fontSize.body, fontWeight: fontWeight.bold },
   disabled: { opacity: 0.4 },
-  form: { padding: 20, gap: 12 },
-  typeRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 4,
-  },
+  form: { padding: space[7], gap: space[4] },
+  typeRow: { flexDirection: 'row', gap: space[3], marginBottom: 4 },
   typeBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
-    backgroundColor: '#1a1a1a',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#2a2a2a',
+    flex: 1, paddingVertical: 12, borderRadius: radius.md,
+    backgroundColor: color.ink, alignItems: 'center',
+    borderWidth: 1, borderColor: color.shore,
   },
-  typeBtnActive: { borderColor: '#0a4a8a', backgroundColor: '#0a1f3a' },
-  typeBtnActiveLive: { borderColor: '#4a2a0a', backgroundColor: '#2a1000' },
-  typeBtnText: { color: '#666', fontWeight: '600' },
-  typeBtnTextActive: { color: '#fff' },
+  typeBtnActive: { borderColor: color.glowCyan, backgroundColor: '#081820' },
+  typeBtnActiveLive: { borderColor: color.glowAmber, backgroundColor: '#1f1200' },
+  typeBtnText: { color: color.fg4, fontWeight: fontWeight.semi },
+  typeBtnTextActive: { color: color.fg },
   input: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: color.ink,
     borderWidth: 1,
-    borderColor: '#2a2a2a',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: '#fff',
+    borderColor: color.shore,
+    borderRadius: radius.lg,
+    paddingHorizontal: space[6],
+    paddingVertical: space[5],
+    fontSize: fontSize.body,
+    color: color.fg,
   },
-  inputText: { color: '#fff', fontSize: 16 },
+  inputText: { color: color.fg, fontSize: fontSize.body },
   textArea: { height: 90, textAlignVertical: 'top' },
   section: { marginTop: 4 },
-  sectionLabel: { color: '#888', fontSize: 13, marginBottom: 10 },
-  statusOptions: { flexDirection: 'row', gap: 10 },
+  sectionLabel: { color: color.fg3, fontSize: fontSize.meta, marginBottom: space[3] },
+  statusOptions: { flexDirection: 'row', gap: space[3] },
   statusOpt: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
-    backgroundColor: '#1a1a1a',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#2a2a2a',
+    flex: 1, paddingVertical: 12, borderRadius: radius.md,
+    backgroundColor: color.ink, alignItems: 'center',
+    borderWidth: 1, borderColor: color.shore,
   },
-  statusOptActive: { borderColor: '#30d158', backgroundColor: '#0a1f0f' },
-  statusOptText: { color: '#666', fontWeight: '600' },
-  statusOptTextActive: { color: '#30d158' },
+  statusOptActive: { borderColor: color.statusLive, backgroundColor: color.statusLiveBg },
+  statusOptText: { color: color.fg4, fontWeight: fontWeight.semi },
+  statusOptTextActive: { color: color.statusLive },
 });
