@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
   FlatList, RefreshControl, Linking, ScrollView,
