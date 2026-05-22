@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
+import { color, fontSize, fontWeight, radius, space } from '../theme';
 
 const DAY_FILTERS = ['All', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -49,15 +50,27 @@ function openTickets(name, venue) {
 export default function DiscoverScreen({ navigation }) {
   const [sections, setSections] = useState([]);
   const [allEvents, setAllEvents] = useState([]);
+  const [goingEvents, setGoingEvents] = useState([]);
   const [activeDay, setActiveDay] = useState('All');
   const [activeCategory, setActiveCategory] = useState('all');
   const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => { fetchEvents(); }, []);
+  useEffect(() => { fetchEvents(); fetchGoingEvents(); }, []);
 
   useEffect(() => {
     buildSections(allEvents, activeDay, activeCategory);
   }, [activeDay, activeCategory, allEvents]);
+
+  async function fetchGoingEvents() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase
+      .from('discovered_event_rsvps')
+      .select('status, discovered_events(*)')
+      .eq('user_id', user.id)
+      .eq('status', 'going');
+    if (data) setGoingEvents(data.map(r => r.discovered_events).filter(Boolean));
+  }
 
   async function fetchEvents() {
     const { data } = await supabase
@@ -174,6 +187,32 @@ export default function DiscoverScreen({ navigation }) {
         </View>
       </View>
 
+      {/* Going strip */}
+      {goingEvents.length > 0 && (
+        <View style={styles.goingSection}>
+          <Text style={styles.goingSectionLabel}>You're going</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.goingScroll}>
+            {goingEvents.map(e => (
+              <TouchableOpacity
+                key={e.id}
+                style={styles.goingCard}
+                onPress={() => navigation.navigate('DiscoverEventDetail', { event: e })}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.goingCardName} numberOfLines={2}>{e.name}</Text>
+                <Text style={styles.goingCardVenue} numberOfLines={1}>{e.venue}</Text>
+                {e.price ? <Text style={styles.goingCardPrice}>{e.price}</Text> : null}
+                {e.starts_at ? (
+                  <Text style={styles.goingCardTime}>
+                    {new Date(e.starts_at).toLocaleDateString('en-ZA', { weekday: 'short', day: 'numeric', month: 'short' })}
+                  </Text>
+                ) : null}
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
       {/* Category cards */}
       <ScrollView
         horizontal
@@ -215,11 +254,12 @@ export default function DiscoverScreen({ navigation }) {
       </View>
 
       <SectionList
+        style={styles.list}
         sections={sections}
         keyExtractor={item => item.id}
         renderItem={renderEvent}
         renderSectionHeader={renderSectionHeader}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={styles.listContent}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -240,105 +280,90 @@ export default function DiscoverScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0d0d0d' },
+  container: { flex: 1, backgroundColor: color.deep },
 
-  header: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 10 },
-  title: { fontSize: 28, fontWeight: '900', color: '#fff', letterSpacing: -1 },
+  header: { paddingHorizontal: space[7], paddingTop: space[2], paddingBottom: space[3] },
+  title: { fontSize: fontSize.h1, fontWeight: fontWeight.black, color: color.fg, letterSpacing: -1 },
   cityRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
-  city: { color: '#2ee6d6', fontSize: 13, fontWeight: '600' },
+  city: { color: color.glowCyan, fontSize: fontSize.meta, fontWeight: fontWeight.semi },
 
   categoryRow: { marginBottom: 4 },
-  categoryScroll: { paddingHorizontal: 16, gap: 8 },
+  categoryScroll: { paddingHorizontal: space[6], gap: space[2] },
   categoryCard: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 76,
-    paddingVertical: 14,
-    borderRadius: 14,
-    backgroundColor: '#1a1a1a',
-    borderWidth: 1,
-    borderColor: '#2a2a2a',
-    gap: 6,
+    alignItems: 'center', justifyContent: 'center',
+    width: 76, paddingVertical: 14,
+    borderRadius: radius.xl, backgroundColor: color.ink,
+    borderWidth: 1, borderColor: color.shore, gap: 6,
   },
-  categoryCardActive: {
-    backgroundColor: '#1f0a0a',
-    borderColor: '#2ee6d6',
-  },
+  categoryCardActive: { backgroundColor: color.statusLiveBg, borderColor: color.glowCyan },
   categoryEmoji: { fontSize: 24 },
-  categoryLabel: { color: '#666', fontSize: 12, fontWeight: '600' },
-  categoryLabelActive: { color: '#2ee6d6' },
+  categoryLabel: { color: color.fg4, fontSize: fontSize.label, fontWeight: fontWeight.semi },
+  categoryLabelActive: { color: color.glowCyan },
 
-  filters: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
+  filters: { flexDirection: 'row', alignItems: 'center', gap: space[2], paddingHorizontal: space[6], paddingVertical: space[3] },
   filterPill: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    backgroundColor: '#1a1a1a',
-    borderWidth: 1,
-    borderColor: '#2a2a2a',
+    paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20,
+    backgroundColor: color.ink, borderWidth: 1, borderColor: color.shore,
   },
-  filterPillActive: { backgroundColor: '#2ee6d6', borderColor: '#2ee6d6' },
-  filterText: { color: '#888', fontSize: 13, fontWeight: '600' },
-  filterTextActive: { color: '#fff' },
-  eventCount: { color: '#444', fontSize: 12, marginLeft: 'auto' },
+  filterPillActive: { backgroundColor: color.glowCyan, borderColor: color.glowCyan },
+  filterText: { color: color.fg3, fontSize: fontSize.meta, fontWeight: fontWeight.semi },
+  filterTextActive: { color: color.deep },
+  eventCount: { color: color.fg4, fontSize: fontSize.label, marginLeft: 'auto' },
 
-  list: { paddingBottom: 100 },
+  list: { flex: 1 },
+  listContent: { paddingBottom: 100 },
 
-  dayHeader: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 },
-  dayName: { color: '#fff', fontSize: 18, fontWeight: '800', letterSpacing: -0.5 },
-  dayDate: { color: '#555', fontSize: 13, marginTop: 1 },
+  dayHeader: { paddingHorizontal: space[6], paddingTop: space[6], paddingBottom: space[2] },
+  dayName: { color: color.fg, fontSize: 18, fontWeight: fontWeight.heavy, letterSpacing: -0.5 },
+  dayDate: { color: color.fg4, fontSize: fontSize.meta, marginTop: 1 },
 
   card: {
-    backgroundColor: '#1a1a1a',
-    borderRadius: 14,
-    padding: 14,
-    marginHorizontal: 16,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#2a2a2a',
+    backgroundColor: color.ink, borderRadius: radius.xl, padding: space[5],
+    marginHorizontal: space[6], marginBottom: space[2],
+    borderWidth: 1, borderColor: color.shore,
   },
-  cardTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 6,
-    gap: 10,
-  },
-  eventName: { color: '#fff', fontSize: 15, fontWeight: '700', flex: 1, lineHeight: 20 },
-  priceBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, flexShrink: 0 },
-  freeBadge: { backgroundColor: '#0a1f0f' },
-  paidBadge: { backgroundColor: '#1f1a0a' },
-  priceText: { fontSize: 11, fontWeight: '700' },
-  freeText: { color: '#30d158' },
-  paidText: { color: '#ff9f0a' },
+  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6, gap: space[3] },
+  eventName: { color: color.fg, fontSize: 15, fontWeight: fontWeight.bold, flex: 1, lineHeight: 20 },
+  priceBadge: { paddingHorizontal: space[2], paddingVertical: 3, borderRadius: radius.xs, flexShrink: 0 },
+  freeBadge: { backgroundColor: color.statusLiveBg },
+  paidBadge: { backgroundColor: color.statusOtwBg },
+  priceText: { fontSize: fontSize.micro, fontWeight: fontWeight.bold },
+  freeText: { color: color.statusLive },
+  paidText: { color: color.statusOtw },
 
-  venueRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 8 },
-  venue: { color: '#888', fontSize: 13, flex: 1 },
+  venueRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: space[2] },
+  venue: { color: color.fg3, fontSize: fontSize.meta, flex: 1 },
 
   cardBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   timeRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  time: { color: '#555', fontSize: 13 },
+  time: { color: color.fg4, fontSize: fontSize.meta },
 
   ticketBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#3a1a1a',
-    backgroundColor: '#1f0a0a',
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: space[3], paddingVertical: 5,
+    borderRadius: radius.sm, borderWidth: 1,
+    borderColor: color.shore2, backgroundColor: color.ink2,
   },
-  ticketText: { color: '#2ee6d6', fontSize: 12, fontWeight: '600' },
+  ticketText: { color: color.glowCyan, fontSize: 12, fontWeight: fontWeight.semi },
 
   empty: { alignItems: 'center', marginTop: 80 },
-  emptyText: { color: '#fff', fontSize: 16, fontWeight: '600', marginBottom: 6 },
-  emptySubText: { color: '#555', fontSize: 14 },
+  emptyText: { color: color.fg, fontSize: fontSize.body, fontWeight: fontWeight.semi, marginBottom: 6 },
+  emptySubText: { color: color.fg4, fontSize: fontSize.meta },
+
+  goingSection: { marginBottom: 4 },
+  goingSectionLabel: {
+    color: color.fg4, fontSize: fontSize.label, fontWeight: fontWeight.semi,
+    textTransform: 'uppercase', letterSpacing: 0.5,
+    paddingHorizontal: space[6], paddingBottom: space[2], paddingTop: 4,
+  },
+  goingScroll: { paddingHorizontal: space[6], gap: space[3] },
+  goingCard: {
+    width: 150, backgroundColor: color.statusLiveBg,
+    borderRadius: radius.xl, borderWidth: 1, borderColor: '#1a3a3a',
+    padding: space[4], gap: 4,
+  },
+  goingCardName: { color: color.fg, fontSize: fontSize.meta, fontWeight: fontWeight.bold, lineHeight: 18 },
+  goingCardVenue: { color: color.fg4, fontSize: 12 },
+  goingCardPrice: { color: color.glowCyan, fontSize: 12, fontWeight: fontWeight.semi },
+  goingCardTime: { color: color.fg3, fontSize: fontSize.micro, marginTop: 4 },
 });
