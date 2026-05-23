@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
   cityRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   city: { color: color.glowCyan, fontSize: fontSize.meta, fontWeight: fontWeight.semi },
 
-  categoryRow: { marginBottom: 4 },
+  categoryRow: { marginBottom: 4, flexShrink: 0 },
   categoryScroll: { paddingHorizontal: space[6], gap: space[2] },
   categoryCard: {
     alignItems: 'center', justifyContent: 'center',
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
   categoryLabel: { color: color.fg4, fontSize: fontSize.label, fontWeight: fontWeight.semi },
   categoryLabelActive: { color: color.glowCyan },
 
-  filters: { flexDirection: 'row', alignItems: 'center', gap: space[2], paddingHorizontal: space[6], paddingVertical: space[3] },
+  filters: { flexDirection: 'row', alignItems: 'center', gap: space[2], paddingHorizontal: space[6], paddingVertical: space[3], flexShrink: 0 },
   filterPill: {
     paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20,
     backgroundColor: color.ink, borderWidth: 1, borderColor: color.shore,
