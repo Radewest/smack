@@ -322,6 +322,28 @@ export default function HomeScreen({ navigation }) {
     });
   }
 
+  function handleFab() {
+    Alert.alert('What\'s the move?', '', [
+      {
+        text: '📅  New event',
+        onPress: () => pickGroup(g => navigation.navigate('CreateEvent', { groupId: g.id })),
+      },
+      {
+        text: '🎉  Free tonight',
+        onPress: handleFreeTonightPress,
+      },
+      {
+        text: '🏠  Home Safe',
+        onPress: handleHomeSafePress,
+      },
+      {
+        text: '👥  New group',
+        onPress: () => navigation.navigate('CreateGroup'),
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  }
+
   const hasActivity = liveMembers.length > 0 || upcomingEvents.length > 0 || activityFeed.length > 0;
 
   return (
@@ -424,6 +446,11 @@ export default function HomeScreen({ navigation }) {
           </>
         )}
       </ScrollView>
+
+      {/* FAB */}
+      <TouchableOpacity style={styles.fab} onPress={handleFab} activeOpacity={0.85}>
+        <Text style={styles.fabIcon}>+</Text>
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -538,4 +565,14 @@ const styles = StyleSheet.create({
   quietEmoji: { fontSize: 40, marginBottom: space[4] },
   quietTitle: { color: color.fg, fontSize: 18, fontWeight: fontWeight.heavy, marginBottom: space[2] },
   quietSub: { color: color.fg4, fontSize: fontSize.meta, textAlign: 'center', lineHeight: 20 },
+
+  // FAB
+  fab: {
+    position: 'absolute', bottom: 30, right: 24,
+    width: 54, height: 54, borderRadius: 27,
+    backgroundColor: color.glowCyan,
+    alignItems: 'center', justifyContent: 'center',
+    ...shadow.fab,
+  },
+  fabIcon: { color: color.deep, fontSize: 30, fontWeight: fontWeight.light, lineHeight: 34 },
 });
